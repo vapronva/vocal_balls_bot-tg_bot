@@ -38,8 +38,8 @@ class VoskAPI:
             }
         )
 
-    @staticmethod
-    def __get_vosk_server_eof_message() -> dict:  # skipcq: PTC-W0038
+    @staticmethod  # skipcq: PTC-W0038
+    def __get_vosk_server_eof_message() -> dict:
         return {"eof": 1}
 
     def __get_language(self) -> AvailableLanguages:  # skipcq: PTC-W0038

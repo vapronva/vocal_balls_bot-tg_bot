@@ -1,5 +1,5 @@
 from os import environ as env
-from pydantic import AnyUrl, parse_obj_as, PositiveInt
+from pydantic import AnyUrl, HttpUrl, parse_obj_as, PositiveInt
 from enum import Enum
 
 
@@ -18,6 +18,8 @@ class Config:
             "TELEGRAM_API_HASH",
             "TELEGRAM_BOT_TOKEN",
             "TELEGRAM_BOT_WORKERS",
+            "VPRW_RCPAPI_ENDPOINT",
+            "VPRW_RCPAPI_KEY",
         ]
         for key in __REQUIRED:
             if key not in env:
@@ -50,6 +52,14 @@ class Config:
     @staticmethod
     def get_telegram_bot_workers() -> PositiveInt:
         return int(env["TELEGRAM_BOT_WORKERS"])
+
+    @staticmethod
+    def get_vprw_rcpapi_endpoint() -> HttpUrl:
+        return parse_obj_as(HttpUrl, env["VPRW_RCPAPI_ENDPOINT"])
+
+    @staticmethod
+    def get_vprw_rcpapi_key() -> str:
+        return env["VPRW_RCPAPI_KEY"]
 
     @staticmethod
     def get_vosk_endpoint(language: AvailableLanguages) -> AnyUrl:

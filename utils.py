@@ -1,21 +1,37 @@
-from typing import List
+from typing import List, Optional
 from VoskAPI import VoskAPI
-from models import SpeechRecognitionVoskPartialResult
+from models import SpeechRecognitionVoskPartialResult, RecasepuncRequestBodyModel
 from pyrogram.types import Message as PyrogramTypeMessage
 from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 import time
 import logging
+from ReCasePuncAPI import RecasepuncAPI
+from config import AvailableLanguages
 
 
 class Utils:
     @staticmethod
     def get_formatted_stt_result(
-        results: List[SpeechRecognitionVoskPartialResult], digitsAfterDot: int = 1
+        results: List[SpeechRecognitionVoskPartialResult],
+        digitsAfterDot: int = 1,
+        rcpapi: Optional[RecasepuncAPI] = None,
     ) -> str:
         resultingString: str = ""
         for partialResult in results:
+            try:
+                formattedText = (
+                    partialResult.text
+                    if not rcpapi
+                    else rcpapi.make_request(
+                        RecasepuncRequestBodyModel(
+                            text=partialResult.text, lang=AvailableLanguages.EN
+                        )
+                    ).result  # type: ignore
+                )
+            except AttributeError:
+                formattedText = partialResult.text
             resultingString += f"""__{round(partialResult.startTime, digitsAfterDot) if int(partialResult.startTime) != 0 else int(partialResult.startTime)} → {round(partialResult.endTime, digitsAfterDot)}:__
-{partialResult.text}
+{formattedText}
 """
         return resultingString
 
@@ -24,6 +40,7 @@ class Utils:
         message: PyrogramTypeMessage,
         vosk: VoskAPI,
         digitsAfterDot: int = 1,
+        checkEvery: float = 2,
     ) -> None:
         lastResult = None
         while True:
@@ -39,4 +56,4 @@ class Utils:
             if vosk.get_finished_status():
                 logging.info("Finished processing audio file for #%s", message.id)
                 break
-            time.sleep(3)
+            time.sleep(checkEvery)
