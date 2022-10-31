@@ -6,7 +6,7 @@ USER 1054
 
 COPY requirements.txt ./
 
-RUN apk add build-base<0.5-r3 && \
+RUN apk add build-base=0.5-r3 && \
     pip install --no-cache-dir -r requirements.txt
 
 COPY . .
