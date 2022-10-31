@@ -21,5 +21,14 @@ class RecasepuncResponseModel(BaseModel):
 
     def fix_result_apostrophe(self) -> Optional[str]:
         if self.result is not None:
-            self.result = self.result.replace(" ' ", "'")
+            self.result = (
+                self.result.replace(" ' ", "'")
+                .replace(" ? ", "?")
+                .replace(" ?", "?")
+                .replace(" ! ", "!")
+                .replace(" !", "!")
+                .replace(" , ", ", ")
+                .replace(" . ", ". ")
+                .replace(" .", ".")
+            )
         return self.result

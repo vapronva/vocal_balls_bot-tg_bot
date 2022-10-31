@@ -1,6 +1,9 @@
 from typing import List, Optional
 from VoskAPI import VoskAPI
-from models import SpeechRecognitionVoskPartialResult, RecasepuncRequestBodyModel
+from models import (
+    SpeechRecognitionVoskPartialResult,
+    RecasepuncRequestBodyModel,
+)
 from pyrogram.types import Message as PyrogramTypeMessage
 from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 import time
@@ -48,9 +51,13 @@ class Utils:
             results = vosk.get_results()
             if results is not None and len(results) > 0 and lastResult != results[-1]:
                 try:
-                    message.edit_text(
-                        text=Utils.get_formatted_stt_result(results, digitsAfterDot)
-                    )
+                    resText = Utils.get_formatted_stt_result(results, digitsAfterDot)
+                    if len(resText) >= 4096:
+                        resText = resText[:4000] + "..."
+                        resText += (
+                            "\n\n__⏳ Full message will be sent after processing...__"
+                        )
+                    message.edit_text(text=resText)
                 except MessageNotModified:
                     logging.warning("Message not modified for #%s", message.id)
             lastResult = vosk.get_result()
@@ -58,3 +65,34 @@ class Utils:
                 logging.info("Finished processing audio file for #%s", message.id)
                 break
             time.sleep(checkEvery)
+
+    @staticmethod
+    def send_stt_result_with_respecting_max_message_length(
+        message: PyrogramTypeMessage,
+        initialMessage: PyrogramTypeMessage,
+        vosk: VoskAPI,
+        rcpapi: Optional[RecasepuncAPI] = None,
+        digitsAfterDot: int = 1,
+        language: AvailableLanguages = AvailableLanguages.RU,
+    ) -> None:
+        results = vosk.get_results()
+        resultingText = Utils.get_formatted_stt_result(
+            results, rcpapi=rcpapi, language=language, digitsAfterDot=digitsAfterDot
+        )
+        textToSend: List[str] = []
+        if len(resultingText) >= 4096:
+            currentPart = ""
+            for line in resultingText.splitlines():
+                if len(currentPart) + len(line) >= 4096:
+                    textToSend.append(currentPart)
+                    currentPart = ""
+                currentPart += line + "\n"
+            textToSend.append(currentPart)
+        else:
+            textToSend.append(resultingText)
+        for text in textToSend:
+            if text == textToSend[0]:
+                initialMessage.edit_text(text=text)
+            else:
+                message.reply_text(text=text, quote=True)
+                time.sleep(0.5)

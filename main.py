@@ -66,15 +66,13 @@ def on_voice_message_private(_, message):
     threadProcessor.join()
     threadTelegramMessageEditor.join()
     results = vosk.get_results()
-    botRepliedMessage.edit_text(
-        text=Utils.get_formatted_stt_result(
-            results, rcpapi=RCPAPI, language=initialLanguage
-        )
-    )
     outputFile.unlink()
     if results is None or len(results) == 0:
         botRepliedMessage.edit_text(text="__⚠️ No words recognized!__")
         return
+    Utils.send_stt_result_with_respecting_max_message_length(
+        message, botRepliedMessage, vosk, RCPAPI, 1, initialLanguage
+    )
 
 
 if __name__ == "__main__":
