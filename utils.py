@@ -15,6 +15,7 @@ class Utils:
         results: List[SpeechRecognitionVoskPartialResult],
         digitsAfterDot: int = 1,
         rcpapi: Optional[RecasepuncAPI] = None,
+        language: AvailableLanguages = AvailableLanguages.RU,
     ) -> str:
         resultingString: str = ""
         for partialResult in results:
@@ -24,7 +25,7 @@ class Utils:
                     if not rcpapi
                     else rcpapi.make_request(
                         RecasepuncRequestBodyModel(
-                            text=partialResult.text, lang=AvailableLanguages.EN
+                            text=partialResult.text, lang=language
                         )
                     ).result  # type: ignore
                 )

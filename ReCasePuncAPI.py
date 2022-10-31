@@ -4,6 +4,7 @@ from pydantic import HttpUrl, parse_obj_as
 from config import AvailableLanguages
 from models import RecasepuncResponseModel, RecasepuncRequestBodyModel
 import logging
+import json
 
 
 class RecasepuncAPI:
@@ -23,19 +24,15 @@ class RecasepuncAPI:
     def make_request(
         self, request: RecasepuncRequestBodyModel
     ) -> Optional[RecasepuncResponseModel]:
-        logging.info(
-            "Making request to %s with text `%s`",
-            self.__get_endpoint(request.lang),
-            request.text.__str__(),
-        )
         response = requests.post(
             url=self.__get_endpoint(request.lang),
             headers=self.__get_headers(),
-            json={"text": request.text.__str__()},
+            data=json.dumps({"text": request.text}),
         )
         if response.status_code == 200:
-            logging.info(
-                "RecasepuncAPI request successful: %s", response.text.__str__()
+            logging.debug(
+                "RecasepuncAPI request successful with status code %s",
+                response.status_code,
             )
             return RecasepuncResponseModel(**response.json())
         return None
