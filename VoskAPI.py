@@ -4,7 +4,6 @@ import websockets
 from config import AvailableLanguages, Config
 from models import SpeechRecognitionVoskPartialResult
 import asyncio
-import websockets
 import json
 import time
 import logging
@@ -22,8 +21,8 @@ class VoskAPI:
     def __get_headers(self) -> list:
         return [["X-API-Key", self.__APIKEY]]
 
+    @staticmethod
     def __get_vosk_server_config_message(
-        self,
         maxAlternatives: int = 20,
         sampleRate: int = 16000,
         altFormat: bool = False,
@@ -39,13 +38,19 @@ class VoskAPI:
             }
         )
 
-    def __get_vosk_server_eof_message(self) -> dict:
+    @staticmethod
+    def __get_vosk_server_eof_message() -> dict:
         return {"eof": 1}
 
-    def __get_vosk_server_message(self, data: bytes) -> bytes:
+    def __get_language(self) -> AvailableLanguages:
+        return self.__LANGUAGE
+
+    @staticmethod
+    def __get_vosk_server_message(data: bytes) -> bytes:
         return data
 
-    def __get_ffmpeg_arguments(self, audioFile: Path) -> list:
+    @staticmethod
+    def __get_ffmpeg_arguments(audioFile: Path) -> list:
         return [
             "ffmpeg",
             "-nostdin",
@@ -62,9 +67,8 @@ class VoskAPI:
             "-",
         ]
 
-    def __parse_response(
-        self, response: str
-    ) -> Optional[SpeechRecognitionVoskPartialResult]:
+    @staticmethod
+    def __parse_response(response: str) -> Optional[SpeechRecognitionVoskPartialResult]:
         try:
             data = json.loads(response)
             if "result" in data:
@@ -124,7 +128,14 @@ class VoskAPI:
             )
             await websocket.send(json.dumps(self.__get_vosk_server_config_message()))
             while True:
-                data = await proc.stdout.read(bytesToReadEveryTime)
+                data = (
+                    await proc.stdout.read(bytesToReadEveryTime)
+                    if proc.stdout
+                    else None
+                )
+                if data is None:
+                    logging.warning("No data read from ffmpeg subprocess")
+                    break
                 if len(data) == 0:
                     break
                 await websocket.send(self.__get_vosk_server_message(data))

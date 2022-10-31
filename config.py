@@ -1,5 +1,5 @@
 from os import environ as env
-from pydantic import AnyUrl, parse_obj_as
+from pydantic import AnyUrl, parse_obj_as, PositiveInt
 from enum import Enum
 
 
@@ -10,7 +10,15 @@ class AvailableLanguages(Enum):
 
 class Config:
     def __init__(self) -> None:
-        __REQUIRED = ["VOSK_API_KEY", "VOSK_ENDPOINT_RUSSIAN", "VOSK_ENDPOINT_ENGLISH"]
+        __REQUIRED = [
+            "VOSK_API_KEY",
+            "VOSK_ENDPOINT_RUSSIAN",
+            "VOSK_ENDPOINT_ENGLISH",
+            "TELEGRAM_API_ID",
+            "TELEGRAM_API_HASH",
+            "TELEGRAM_BOT_TOKEN",
+            "TELEGRAM_BOT_WORKERS",
+        ]
         for key in __REQUIRED:
             if key not in env:
                 raise Exception(f"Missing required environment variable: {key}")
@@ -26,6 +34,22 @@ class Config:
     @staticmethod
     def get_vosk_endpoint_english() -> AnyUrl:
         return parse_obj_as(AnyUrl, env["VOSK_ENDPOINT_ENGLISH"])
+
+    @staticmethod
+    def get_telegram_api_id() -> int:
+        return int(env["TELEGRAM_API_ID"])
+
+    @staticmethod
+    def get_telegram_api_hash() -> str:
+        return env["TELEGRAM_API_HASH"]
+
+    @staticmethod
+    def get_telegram_bot_token() -> str:
+        return env["TELEGRAM_BOT_TOKEN"]
+
+    @staticmethod
+    def get_telegram_bot_workers() -> PositiveInt:
+        return int(env["TELEGRAM_BOT_WORKERS"])
 
     @staticmethod
     def get_vosk_endpoint(language: AvailableLanguages) -> AnyUrl:

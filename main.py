@@ -5,47 +5,69 @@ import asyncio
 from pathlib import Path
 import time
 import logging
+from pyrogram import Client as BotClient  # type: ignore
+from pyrogram import filters as PyrogramFilters
+import uuid
+from utils import Utils
 
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+CONFIG = Config()
+
+
+bot = BotClient(
+    name="vocal_balls_bot-testing_1",
+    api_id=CONFIG.get_telegram_api_id(),
+    api_hash=CONFIG.get_telegram_api_hash(),
+    bot_token=CONFIG.get_telegram_bot_token(),
+    workers=CONFIG.get_telegram_bot_workers(),
+)
+
 
 def show_results_as_they_come(voskAPI: VoskAPI) -> None:
     lastResult = None
     while True:
-        logging.info(voskAPI.get_result()) if voskAPI.get_result() != lastResult else None
+        logging.info(
+            voskAPI.get_result()
+        ) if voskAPI.get_result() != lastResult else None
         lastResult = voskAPI.get_result()
         if voskAPI.get_finished_status():
             break
         time.sleep(0.5)
 
 
-def main():
-    config = Config()
+@bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
+def on_voice_message_private(client, message):
+    logging.info("Received voice message from user: %s", message.from_user.id)
     vosk = VoskAPI(
-        apiKey=config.get_vosk_api_key(),
-        language=AvailableLanguages.EN,
+        apiKey=CONFIG.get_vosk_api_key(),
+        language=AvailableLanguages.RU,
     )
+    outputFile = Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
+    message.download(file_name=outputFile.__str__())
     threadProcessor = threading.Thread(
         target=asyncio.run,
         args=(
             vosk.process_audio_file(
-                audioFile=Path("eeddebaa-1197-4f89-a1f9-d81bdb9c6e77.mp3"),
-                bytesToReadEveryTime=128000,
+                audioFile=outputFile,
+                bytesToReadEveryTime=64000,
             ),
         ),
     )
-    threadResultsPrinter = threading.Thread(
-        target=show_results_as_they_come, args=(vosk,)
-    )
     threadProcessor.start()
-    threadResultsPrinter.start()
     threadProcessor.join()
-    threadResultsPrinter.join()
-    logging.info(vosk.get_results())
+    results = vosk.get_results()
+    if results is None or len(results) == 0:
+        message.reply_text("No results", quote=True)
+    message.reply_text(text=Utils.get_formatted_stt_result(results), quote=True)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        bot.run()
+    except KeyboardInterrupt:
+        logging.info("Exiting the program due to KeyboardInterrupt")
+        exit(0)
