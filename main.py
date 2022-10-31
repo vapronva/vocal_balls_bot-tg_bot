@@ -3,13 +3,13 @@ from VoskAPI import VoskAPI
 import threading
 import asyncio
 from pathlib import Path
-import time
 import logging
 from pyrogram import Client as BotClient  # type: ignore
 from pyrogram import filters as PyrogramFilters
 import uuid
 import sys
 from utils import Utils
+from ReCasePuncAPI import RecasepuncAPI
 
 
 logging.basicConfig(
@@ -18,13 +18,16 @@ logging.basicConfig(
 
 CONFIG = Config()
 
-
 bot = BotClient(
     name="vocal_balls_bot-testing_1",
     api_id=CONFIG.get_telegram_api_id(),
     api_hash=CONFIG.get_telegram_api_hash(),
     bot_token=CONFIG.get_telegram_bot_token(),
     workers=CONFIG.get_telegram_bot_workers(),
+)
+
+RCPAPI = RecasepuncAPI(
+    endpointBase=CONFIG.get_vprw_rcpapi_endpoint(), apiKey=CONFIG.get_vprw_rcpapi_key()
 )
 
 
@@ -62,6 +65,10 @@ def on_voice_message_private(_, message):
     threadProcessor.join()
     threadTelegramMessageEditor.join()
     results = vosk.get_results()
+    botRepliedMessage.edit_text(
+        text=Utils.get_formatted_stt_result(results, rcpapi=RCPAPI)
+    )
+    outputFile.unlink()
     if results is None or len(results) == 0:
         botRepliedMessage.edit_text(text="__⚠️ No words recognized!__")
         return
