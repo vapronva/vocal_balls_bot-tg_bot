@@ -27,7 +27,7 @@ class Utils:
                         RecasepuncRequestBodyModel(
                             text=partialResult.text, lang=language
                         )
-                    ).result  # type: ignore
+                    ).fix_result_apostrophe()  # type: ignore
                 )
             except AttributeError:
                 formattedText = partialResult.text

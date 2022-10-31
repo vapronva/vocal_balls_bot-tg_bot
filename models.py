@@ -18,3 +18,8 @@ class RecasepuncRequestBodyModel(BaseModel):
 class RecasepuncResponseModel(BaseModel):
     error: Optional[dict]
     result: Optional[str]
+
+    def fix_result_apostrophe(self) -> Optional[str]:
+        if self.result is not None:
+            self.result = self.result.replace(" ' ", "'")
+        return self.result

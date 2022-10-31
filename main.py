@@ -33,13 +33,14 @@ RCPAPI = RecasepuncAPI(
 
 @bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
 def on_voice_message_private(_, message):
+    initialLanguage: AvailableLanguages = AvailableLanguages.EN
     logging.info("Received voice message from user: %s", message.from_user.id)
     botRepliedMessage = message.reply_text(
         "__💬 Received your voice message...__", quote=True
     )
     vosk = VoskAPI(
         apiKey=CONFIG.get_vosk_api_key(),
-        language=AvailableLanguages.RU,
+        language=initialLanguage,
     )
     outputFile = Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
     message.download(file_name=outputFile.__str__())
@@ -66,7 +67,9 @@ def on_voice_message_private(_, message):
     threadTelegramMessageEditor.join()
     results = vosk.get_results()
     botRepliedMessage.edit_text(
-        text=Utils.get_formatted_stt_result(results, rcpapi=RCPAPI)
+        text=Utils.get_formatted_stt_result(
+            results, rcpapi=RCPAPI, language=initialLanguage
+        )
     )
     outputFile.unlink()
     if results is None or len(results) == 0:
