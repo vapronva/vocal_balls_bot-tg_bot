@@ -6,8 +6,8 @@ from models import SpeechRecognitionVoskPartialResult
 import asyncio
 import websockets
 import json
-import threading
 import time
+import logging
 
 
 class VoskAPI:
@@ -17,12 +17,27 @@ class VoskAPI:
         self.__LANGUAGE = language
         self.__RESULTS: List[SpeechRecognitionVoskPartialResult] = []
         self.__FINISHED_STATUS: bool = False
+        logging.debug("Initialized VoskAPI with endpoint: %s", self.__ENDPOINT)
 
     def __get_headers(self) -> list:
         return [["X-API-Key", self.__APIKEY]]
 
-    def __get_vosk_server_config_message(self) -> dict:
-        return {"config": {"sample_rate": 16000}}
+    def __get_vosk_server_config_message(
+        self,
+        maxAlternatives: int = 20,
+        sampleRate: int = 16000,
+        altFormat: bool = False,
+    ) -> dict:
+        return (
+            {"config": {"sample_rate": 16000}}
+            if not altFormat
+            else {
+                "config": {
+                    "max_alternatives": maxAlternatives,
+                    "sample_rate": sampleRate,
+                }
+            }
+        )
 
     def __get_vosk_server_eof_message(self) -> dict:
         return {"eof": 1}
@@ -94,17 +109,22 @@ class VoskAPI:
     def __set_finished_status(self, status: bool) -> None:
         self.__FINISHED_STATUS = status
 
-    async def process_audio_file(self, audioFile: Path) -> None:
-        async with websockets.connect(
+    async def process_audio_file(
+        self, audioFile: Path, bytesToReadEveryTime: int = 8000
+    ) -> None:
+        logging.debug("Processing audio file: %s", audioFile.__str__())
+        startTime = time.time()
+        async with websockets.connect(  # type: ignore
             self.__ENDPOINT, extra_headers=self.__get_headers()
         ) as websocket:
+            logging.info("Using ffmpeg to convert audio file real-time")
             proc = await asyncio.create_subprocess_exec(
                 *self.__get_ffmpeg_arguments(audioFile),
                 stdout=asyncio.subprocess.PIPE,
             )
             await websocket.send(json.dumps(self.__get_vosk_server_config_message()))
             while True:
-                data = await proc.stdout.read(8000)
+                data = await proc.stdout.read(bytesToReadEveryTime)
                 if len(data) == 0:
                     break
                 await websocket.send(self.__get_vosk_server_message(data))
@@ -113,37 +133,28 @@ class VoskAPI:
             self.__add_result(self.__parse_response(await websocket.recv()))
             await proc.wait()
             self.__set_finished_status(True)
-
-
-def show_results_as_they_come(voskAPI: VoskAPI) -> None:
-    while True:
-        print(voskAPI.get_result())
-        if voskAPI.get_finished_status():
-            break
-        time.sleep(0.5)
-
-
-def main():
-    config = Config()
-    vosk = VoskAPI(
-        apiKey=config.get_vosk_api_key(),
-        language=AvailableLanguages.EN,
-    )
-    threadProcessor = threading.Thread(
-        target=asyncio.run,
-        args=(
-            vosk.process_audio_file(Path("eeddebaa-1197-4f89-a1f9-d81bdb9c6e77.mp3")),
-        ),
-    )
-    threadResultsPrinter = threading.Thread(
-        target=show_results_as_they_come, args=(vosk,)
-    )
-    threadProcessor.start()
-    threadResultsPrinter.start()
-    threadProcessor.join()
-    threadResultsPrinter.join()
-    print(vosk.get_results())
-
-
-if __name__ == "__main__":
-    main()
+            logging.info(
+                "Took %s seconds to process audio file with %d bytes sent every time",
+                time.time() - startTime,
+                bytesToReadEveryTime,
+            )
+            # logging.info("Using native audio file format")
+            # waveFile = wave.open(audioFile.__str__(), "rb")
+            # await websocket.send(
+            #     json.dumps(
+            #         self.__get_vosk_server_config_message(
+            #             sampleRate=waveFile.getframerate(),
+            #             altFormat=True,
+            #         )
+            #     ).__str__()
+            # )
+            # buffer_size = int(waveFile.getframerate() * 0.2)
+            # while True:
+            #     data = waveFile.readframes(buffer_size)
+            #     if len(data) == 0:
+            #         break
+            #     await websocket.send(self.__get_vosk_server_message(data))
+            #     self.__add_result(self.__parse_response(await websocket.recv()))
+            # await websocket.send('{"eof" : 1}')
+            # self.__add_result(self.__parse_response(await websocket.recv()))
+            # self.__set_finished_status(True)
