@@ -8,6 +8,7 @@ import logging
 from pyrogram import Client as BotClient  # type: ignore
 from pyrogram import filters as PyrogramFilters
 import uuid
+import sys
 from utils import Utils
 
 
@@ -27,21 +28,12 @@ bot = BotClient(
 )
 
 
-def show_results_as_they_come(voskAPI: VoskAPI) -> None:
-    lastResult = None
-    while True:
-        logging.info(
-            voskAPI.get_result()
-        ) if voskAPI.get_result() != lastResult else None
-        lastResult = voskAPI.get_result()
-        if voskAPI.get_finished_status():
-            break
-        time.sleep(0.5)
-
-
 @bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
-def on_voice_message_private(client, message):
+def on_voice_message_private(_, message):
     logging.info("Received voice message from user: %s", message.from_user.id)
+    botRepliedMessage = message.reply_text(
+        "__💬 Received your voice message...__", quote=True
+    )
     vosk = VoskAPI(
         apiKey=CONFIG.get_vosk_api_key(),
         language=AvailableLanguages.RU,
@@ -57,12 +49,22 @@ def on_voice_message_private(client, message):
             ),
         ),
     )
+    threadTelegramMessageEditor = threading.Thread(
+        target=Utils.update_stt_result_as_everything_comes_in,
+        args=(
+            botRepliedMessage,
+            vosk,
+        ),
+    )
     threadProcessor.start()
+    threadTelegramMessageEditor.start()
+    botRepliedMessage.edit_text(text="__🔁 Processing your voice message...__")
     threadProcessor.join()
+    threadTelegramMessageEditor.join()
     results = vosk.get_results()
     if results is None or len(results) == 0:
-        message.reply_text("No results", quote=True)
-    message.reply_text(text=Utils.get_formatted_stt_result(results), quote=True)
+        botRepliedMessage.edit_text(text="__⚠️ No words recognized!__")
+        return
 
 
 if __name__ == "__main__":
@@ -70,4 +72,4 @@ if __name__ == "__main__":
         bot.run()
     except KeyboardInterrupt:
         logging.info("Exiting the program due to KeyboardInterrupt")
-        exit(0)
+        sys.exit(0)
