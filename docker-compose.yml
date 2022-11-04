@@ -19,7 +19,6 @@ services:
     image: registry.vapronva.pw/vapronva/vocal_balls_bot-tg_bot/bot:latest
     container_name: "worker-vocalballsbot-vapronva-main"
     restart: unless-stopped
-    user: "1056"
     environment:
       VOSK_API_KEY: ${VOSK_API_KEY}
       VOSK_ENDPOINT_ENGLISH: ${VOSK_ENDPOINT_ENGLISH}

@@ -9,6 +9,4 @@ RUN apk add build-base=0.5-r3 && \
 
 COPY . .
 
-USER 1056
-
 CMD [ "python", "./main.py" ]
