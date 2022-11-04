@@ -33,7 +33,7 @@ RCPAPI = RecasepuncAPI(
 
 @bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
 def on_voice_message_private(_, message):
-    initialLanguage: AvailableLanguages = AvailableLanguages.EN
+    initialLanguage: AvailableLanguages = AvailableLanguages.RU
     logging.info("Received voice message from user: %s", message.from_user.id)
     botRepliedMessage = message.reply_text(
         "__💬 Received your voice message...__", quote=True
