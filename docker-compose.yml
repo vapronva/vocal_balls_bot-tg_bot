@@ -1,0 +1,43 @@
+# bomedb-vocalballsbot-vapronva
+version: "3"
+
+servies:
+  db:
+    image: mongo:5-focal
+    container_name: "database-vocalballsbot-vapronva-mongo"
+    restart: unless-stopped
+    volumes:
+      - ${DATABASE_PATH_HOST}:/data/db
+    ports:
+      - ${DATABASE_PORT_HOST}:27017
+    user: "1056"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${DATABASE_CREDENTIALS_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${DATABASE_CREDENTIALS_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DATABASE_NAME_VOCALBALLSBOT}
+  bot:
+    image: registry.vapronva.pw/vapronva/vocal_balls_bot-tg_bot/bot:latest
+    container_name: "worker-vocalballsbot-vapronva-main"
+    restart: unless-stopped
+    user: "1056"
+    environment:
+      VOSK_API_KEY: ${VOSK_API_KEY}
+      VOSK_ENDPOINT_ENGLISH: ${VOSK_ENDPOINT_ENGLISH}
+      VOSK_ENDPOINT_RUSSIAN: ${VOSK_ENDPOINT_RUSSIAN}
+      TELEGRAM_API_ID: ${TELEGRAM_API_ID}
+      TELEGRAM_API_HASH: ${TELEGRAM_API_HASH}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN_STAGING}
+      TELEGRAM_BOT_WORKERS: ${TELEGRAM_BOT_WORKERS}
+      VPRW_RCPAPI_ENDPOINT: ${VPRW_RCPAPI_ENDPOINT}
+      VPRW_RCPAPI_KEY: ${VPRW_RCPAPI_KEY}
+      DATABASE_CREDENTIALS_URI: mongodb://${DATABASE_CREDENTIALS_USERNAME}:${DATABASE_CREDENTIALS_PASSWORD}@db:27017/${DATABASE_NAME_VOCALBALLSBOT}
+
+networks:
+  default:
+    driver: bridge
+    name: "bomedb-vocalballsbot-vapronva-network"
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.80.0/24
+          gateway: 172.16.80.1
