@@ -1,7 +1,7 @@
 # bomedb-vocalballsbot-vapronva
 version: "3"
 
-servies:
+services:
   db:
     image: mongo:5-focal
     container_name: "database-vocalballsbot-vapronva-mongo"
