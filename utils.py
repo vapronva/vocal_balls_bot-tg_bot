@@ -92,7 +92,10 @@ class Utils:
             textToSend.append(resultingText)
         for text in textToSend:
             if text == textToSend[0]:
-                initialMessage.edit_text(text=text)
+                try:
+                    initialMessage.edit_text(text=text)
+                except MessageNotModified:
+                    logging.warning("Message not modified for #%s", message.id)
             else:
                 message.reply_text(text=text, quote=True)
                 time.sleep(0.5)

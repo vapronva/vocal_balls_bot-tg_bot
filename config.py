@@ -3,7 +3,7 @@ from pydantic import AnyUrl, HttpUrl, parse_obj_as, PositiveInt
 from enum import Enum
 
 
-class AvailableLanguages(Enum):
+class AvailableLanguages(str, Enum):
     EN = "en"
     RU = "ru"
 
@@ -20,6 +20,9 @@ class Config:
             "TELEGRAM_BOT_WORKERS",
             "VPRW_RCPAPI_ENDPOINT",
             "VPRW_RCPAPI_KEY",
+            "APPWRITE_API_ENDPOINT",
+            "APPWRITE_PROJECT_ID",
+            "APPWRITE_API_KEY",
         ]
         for key in __REQUIRED:
             if key not in env:
@@ -69,3 +72,15 @@ class Config:
             return Config.get_vosk_endpoint_english()
         else:
             raise Exception(f"Unsupported language: {language}")
+
+    @staticmethod
+    def get_appwrite_api_endpoint() -> HttpUrl:
+        return parse_obj_as(HttpUrl, env["APPWRITE_API_ENDPOINT"])
+
+    @staticmethod
+    def get_appwrite_project_id() -> str:
+        return env["APPWRITE_PROJECT_ID"]
+
+    @staticmethod
+    def get_appwrite_api_key() -> str:
+        return env["APPWRITE_API_KEY"]

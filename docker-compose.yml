@@ -2,19 +2,6 @@
 version: "3"
 
 services:
-  db:
-    image: mongo:5-focal
-    container_name: "database-vocalballsbot-vapronva-mongo"
-    restart: unless-stopped
-    volumes:
-      - ${DATABASE_PATH_HOST}:/data/db
-    ports:
-      - ${DATABASE_PORT_HOST}:27017
-    user: "1056"
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${DATABASE_CREDENTIALS_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${DATABASE_CREDENTIALS_PASSWORD}
-      MONGO_INITDB_DATABASE: ${DATABASE_NAME_VOCALBALLSBOT}
   bot:
     image: registry.vapronva.pw/vapronva/vocal_balls_bot-tg_bot/bot:latest
     container_name: "worker-vocalballsbot-vapronva-main"
@@ -29,7 +16,9 @@ services:
       TELEGRAM_BOT_WORKERS: ${TELEGRAM_BOT_WORKERS}
       VPRW_RCPAPI_ENDPOINT: ${VPRW_RCPAPI_ENDPOINT}
       VPRW_RCPAPI_KEY: ${VPRW_RCPAPI_KEY}
-      DATABASE_CREDENTIALS_URI: mongodb://${DATABASE_CREDENTIALS_USERNAME}:${DATABASE_CREDENTIALS_PASSWORD}@db:27017/${DATABASE_NAME_VOCALBALLSBOT}
+      APPWRITE_API_ENDPOINT: ${APPWRITE_API_ENDPOINT}
+      APPWRITE_PROJECT_ID: ${APPWRITE_PROJECT_ID}
+      APPWRITE_API_KEY: ${APPWRITE_API_KEY}
 
 networks:
   default:

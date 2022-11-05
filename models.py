@@ -23,12 +23,41 @@ class RecasepuncResponseModel(BaseModel):
         if self.result is not None:
             self.result = (
                 self.result.replace(" ' ", "'")
-                .replace(" ? ", "?")
+                .replace(" ? ", "? ")
                 .replace(" ?", "?")
-                .replace(" ! ", "!")
+                .replace(" ! ", "! ")
                 .replace(" !", "!")
                 .replace(" , ", ", ")
                 .replace(" . ", ". ")
                 .replace(" .", ".")
             )
         return self.result
+
+
+class UserStatisticsModel(BaseModel):
+    messagesReceived: int = 0
+    messagesProcessed: int = 0
+    charactersProcessed: int = 0
+    secondsOfAudioProcessed: int = 0
+    processedWithLanguage: dict[AvailableLanguages, int] = {
+        AvailableLanguages.RU: 0,
+        AvailableLanguages.EN: 0,
+    }
+
+
+class UserPreferencesModel(BaseModel):
+    howManyDigitsAfterDot: int = 1
+    language: AvailableLanguages = AvailableLanguages.EN
+    recasepunc: bool = True
+    participateInStatistics: bool = True
+    statistics: UserStatisticsModel = UserStatisticsModel()
+
+
+class UserModel(BaseModel):
+    id: str
+    name: Optional[str] = None
+    status: bool
+    prefs: UserPreferencesModel = UserPreferencesModel()
+
+    def __init__(self, **data) -> None:
+        super().__init__(id=data["$id"], **data)
