@@ -3,3 +3,6 @@ LICENSE
 README.md
 .deepsource.toml
 .gitignore
+.gitattributes
+_assets
+gitlab-ci.yml

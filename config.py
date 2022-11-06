@@ -23,6 +23,7 @@ class Config:
             "APPWRITE_API_ENDPOINT",
             "APPWRITE_PROJECT_ID",
             "APPWRITE_API_KEY",
+            "APPWRITE_STORAGE_BOTAVATAR",
         ]
         for key in __REQUIRED:
             if key not in env:
@@ -84,3 +85,7 @@ class Config:
     @staticmethod
     def get_appwrite_api_key() -> str:
         return env["APPWRITE_API_KEY"]
+
+    @staticmethod
+    def get_appwrite_storage_botavatar() -> HttpUrl:
+        return parse_obj_as(HttpUrl, env["APPWRITE_STORAGE_BOTAVATAR"])
