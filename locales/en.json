@@ -1,0 +1,17 @@
+{
+    "voiceMessageReceived": "Received your voice message",
+    "voiceMessageProcessing": "Processing your voice message",
+    "noWordsFound": "No words recognized",
+    "settings": "Settings",
+    "settingsLanguage": "Language",
+    "settingsLanguageRussian": "Russian 🇷🇺",
+    "settingsLanguageEnglish": "English 🇬🇧",
+    "settingsPunctuation": "Punctuation marks placement",
+    "settingsParticipateInStatistics": "Participate in statistics",
+    "settingsHowMany": "📊 Statistics",
+    "settingsHowManyMessagesReceived": "messages received",
+    "settingsHowManyMessagesProcessed": "messages processed",
+    "settingsHowManyCharactersProcessed": "characters processed",
+    "settingsHowManySecondsOfAudioProcessed": "seconds of audio processed",
+    "settingsDigitsAfterDot": "Digits after dot"
+}

@@ -6,15 +6,22 @@ from pathlib import Path
 import logging
 from pyrogram import Client as BotClient  # type: ignore
 from pyrogram import filters as PyrogramFilters
+from pyrogram.errors import MessageNotModified
 from appwrite.client import Client as AppWriteClient
 from appwrite.services.users import Users as AppWriteUsers
 from appwrite.exception import AppwriteException
-from models import UserModel
+from models import (
+    UserModel,
+    CallbackQueryActionTypes,
+    CallbackQueryActionsObjects,
+    CallbackQueryActionsValues,
+)
 import audioread
 import uuid
 import sys
 from utils import Utils
 from ReCasePuncAPI import RecasepuncAPI
+from Locale import LOCALE
 
 
 logging.basicConfig(
@@ -44,18 +51,46 @@ APPWRITECLIENT = AppWriteClient()
 APPWRITEUSERS = AppWriteUsers(APPWRITECLIENT)
 
 
-@bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
-def on_voice_message_private(_, message):
-    INTERNAL_ID = f"tlgrm-vocalballsbot-{message.from_user.id}"
+def get_user(user_id: int) -> UserModel:
+    INTERNAL_ID = f"tlgrm-vocalballsbot-{user_id}"
     try:
         USER: UserModel = UserModel(**APPWRITEUSERS.get(user_id=INTERNAL_ID))
     except AppwriteException:
         USER: UserModel = UserModel(**APPWRITEUSERS.create(user_id=INTERNAL_ID))
+        APPWRITEUSERS.update_prefs(
+            user_id=f"tlgrm-vocalballsbot-{user_id}",
+            prefs=USER.prefs.dict(),
+        )
+    return USER
+
+
+@bot.on_message(PyrogramFilters.command("settings") & PyrogramFilters.private)
+def on_settings_command(_, message):
+    USER = get_user(message.from_user.id)
+    message.reply_text(
+        f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b>",
+        quote=True,
+        reply_markup=Utils.generate_settings_keyboard(USER, message.from_user.id),
+    )
+
+
+@bot.on_message(PyrogramFilters.command("stats") & PyrogramFilters.private)
+def on_stats_command(_, message):
+    USER = get_user(message.from_user.id)
+    message.reply_text(
+        Utils.generate_statistics_text(USER), quote=True, disable_web_page_preview=True
+    )
+
+
+@bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
+def on_voice_message_private(_, message):
+    USER = get_user(message.from_user.id)
     USER.prefs.statistics.messagesReceived += 1
     initialLanguage: AvailableLanguages = USER.prefs.language
     logging.info("Received voice message from user: %s", message.from_user.id)
     botRepliedMessage = message.reply_text(
-        "__💬 Received your voice message...__", quote=True
+        f"__💬 {LOCALE.get(USER.prefs.language, 'voiceMessageReceived')}...__",
+        quote=True,
     )
     vosk = VoskAPI(
         apiKey=CONFIG.get_vosk_api_key(),
@@ -82,7 +117,9 @@ def on_voice_message_private(_, message):
     )
     threadProcessor.start()
     threadTelegramMessageEditor.start()
-    botRepliedMessage.edit_text(text="__🔁 Processing your voice message...__")
+    botRepliedMessage.edit_text(
+        text=f"__🔁 {LOCALE.get(USER.prefs.language, 'voiceMessageProcessing')}...__"
+    )
     threadProcessor.join()
     threadTelegramMessageEditor.join()
     results = vosk.get_results()
@@ -102,12 +139,16 @@ def on_voice_message_private(_, message):
         if message.from_user.username is not None
         else f"{message.from_user.first_name} {message.from_user.last_name} (null)"
     )
-    USER.prefs.recasepunc = False
-    APPWRITEUSERS.update_name(user_id=INTERNAL_ID, name=USER.name)
-    APPWRITEUSERS.update_prefs(user_id=INTERNAL_ID, prefs=USER.prefs.dict())
-    logging.info("User information: %s", USER.dict())
+    APPWRITEUSERS.update_name(
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=USER.name
+    )
+    APPWRITEUSERS.update_prefs(
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
+    )
     if results is None or len(results) == 0:
-        botRepliedMessage.edit_text(text="__⚠️ No words recognized!__")
+        botRepliedMessage.edit_text(
+            text=f"__⚠️ {LOCALE.get(USER.prefs.language, 'noWordsFound')}!__"
+        )
         return
     Utils.send_stt_result_with_respecting_max_message_length(
         message,
@@ -117,6 +158,44 @@ def on_voice_message_private(_, message):
         USER.prefs.howManyDigitsAfterDot,
         initialLanguage,
     )
+
+
+@bot.on_callback_query()
+def on_callback(_, callbackQuery):
+    callback = Utils.check_callback_query(callbackQuery)
+    if callback is None:
+        return
+    if callback.telegramUserId != callbackQuery.from_user.id:
+        return
+    USER = get_user(callbackQuery.from_user.id)
+    try:
+        if (
+            callback.actionType == CallbackQueryActionTypes.ACTION
+            and callback.actionObject == CallbackQueryActionsObjects.LANGUAGE
+            and not callback.actionValue == CallbackQueryActionsValues.NOTHING
+        ):
+            USER.prefs.language = AvailableLanguages(callback.actionValue.value)
+            logging.debug(
+                "Language changed to %s for #%s", USER.prefs.language, USER.id
+            )
+            APPWRITEUSERS.update_prefs(
+                user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
+                prefs=USER.prefs.dict(),
+            )
+            try:
+                callbackQuery.edit_message_text(
+                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b>",
+                    reply_markup=Utils.generate_settings_keyboard(
+                        USER, callbackQuery.from_user.id
+                    ),
+                )
+            except MessageNotModified:
+                pass
+            return
+        return
+    except Exception as e:
+        logging.error(e)
+        return
 
 
 if __name__ == "__main__":

@@ -3,13 +3,20 @@ from VoskAPI import VoskAPI
 from models import (
     SpeechRecognitionVoskPartialResult,
     RecasepuncRequestBodyModel,
+    UserModel,
+    CallbackQueryDataModel,
+    CallbackQueryActionTypes,
+    CallbackQueryActionsObjects,
+    CallbackQueryActionsValues,
 )
 from pyrogram.types import Message as PyrogramTypeMessage
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 import time
 import logging
 from ReCasePuncAPI import RecasepuncAPI
 from config import AvailableLanguages
+from Locale import LOCALE
 
 
 class Utils:
@@ -99,3 +106,70 @@ class Utils:
             else:
                 message.reply_text(text=text, quote=True)
                 time.sleep(0.5)
+
+    @staticmethod
+    def generate_settings_keyboard(
+        user: UserModel, telegramUserID: int
+    ) -> InlineKeyboardMarkup:
+        resultingKeyboard: List[List[InlineKeyboardButton]] = []
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"🔊 {LOCALE.get(user.prefs.language, 'settingsLanguage')}",
+                    callback_data=f"vclblls-sttc-lang-none-{telegramUserID}",
+                )
+            ]
+        )
+        secondRow: List[InlineKeyboardButton] = []
+        for language in [AvailableLanguages.RU, AvailableLanguages.EN]:
+            secondRow.append(
+                InlineKeyboardButton(
+                    f"{'✅ ' if user.prefs.language == language else ''}{LOCALE.get(user.prefs.language, 'settingsLanguageRussian') if language == AvailableLanguages.RU else LOCALE.get(user.prefs.language, 'settingsLanguageEnglish')}",
+                    callback_data=f"vclblls-actn-lang-{language.value}-{telegramUserID}",
+                )
+            )
+        resultingKeyboard.append(secondRow)
+        return InlineKeyboardMarkup(resultingKeyboard)
+
+    @staticmethod
+    def generate_statistics_text(user: UserModel) -> str:
+        return f"""<b>{LOCALE.get(user.prefs.language, 'settingsHowMany')}</b>
+- <code>{user.prefs.statistics.messagesProcessed}</code> {LOCALE.get(user.prefs.language, 'settingsHowManyMessagesProcessed')}
+- <code>{user.prefs.statistics.charactersProcessed}</code> {LOCALE.get(user.prefs.language, 'settingsHowManyCharactersProcessed')}
+- <code>{user.prefs.statistics.secondsOfAudioProcessed}</code> {LOCALE.get(user.prefs.language, 'settingsHowManySecondsOfAudioProcessed')}"""
+
+    @staticmethod
+    def check_callback_query(
+        callbackQuery: CallbackQuery,
+    ) -> Optional[CallbackQueryDataModel]:
+        try:
+            (
+                botName,
+                actionType,
+                actionObject,
+                actionValue,
+                telegramUserId,
+            ) = callbackQuery.data.__str__().split("-")
+        except ValueError:
+            return None
+        if botName != "vclblls":
+            return None
+        try:
+            data = CallbackQueryDataModel(
+                actionType=CallbackQueryActionTypes(actionType),
+                actionObject=CallbackQueryActionsObjects(actionObject),
+                actionValue=CallbackQueryActionsValues(actionValue),
+                telegramUserId=int(telegramUserId),
+            )
+        except ValueError:
+            return None
+        except AttributeError:
+            return None
+        if (
+            data.actionType == CallbackQueryActionTypes.ACTION
+            and data.actionValue == CallbackQueryActionsValues.NOTHING
+        ):
+            return None
+        if data.actionType == CallbackQueryActionTypes.STATIC:
+            return None
+        return data

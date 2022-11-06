@@ -19,6 +19,12 @@ services:
       APPWRITE_API_ENDPOINT: ${APPWRITE_API_ENDPOINT}
       APPWRITE_PROJECT_ID: ${APPWRITE_PROJECT_ID}
       APPWRITE_API_KEY: ${APPWRITE_API_KEY}
+      APPWRITE_STORAGE_BOTAVATAR: ${APPWRITE_STORAGE_BOTAVATAR}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10mb"
+        max-file: "3"
 
 networks:
   default:

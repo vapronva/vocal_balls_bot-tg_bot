@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel, NonNegativeFloat
 from config import AvailableLanguages
+from enum import Enum
 
 
 class SpeechRecognitionVoskPartialResult(BaseModel):
@@ -61,3 +62,25 @@ class UserModel(BaseModel):
 
     def __init__(self, **data) -> None:
         super().__init__(id=data["$id"], **data)
+
+
+class CallbackQueryActionTypes(Enum):
+    STATIC = "sttc"
+    ACTION = "actn"
+
+
+class CallbackQueryActionsObjects(Enum):
+    LANGUAGE = "lang"
+
+
+class CallbackQueryActionsValues(Enum):
+    RUSSIAN = "ru"
+    ENGLISH = "en"
+    NOTHING = "none"
+
+
+class CallbackQueryDataModel(BaseModel):
+    actionType: CallbackQueryActionTypes
+    actionObject: CallbackQueryActionsObjects
+    actionValue: CallbackQueryActionsValues
+    telegramUserId: int
