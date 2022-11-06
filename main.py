@@ -68,7 +68,7 @@ def get_user(user_id: int) -> UserModel:
 def on_settings_command(_, message):
     USER = get_user(message.from_user.id)
     message.reply_text(
-        f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b>",
+        f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
         quote=True,
         reply_markup=Utils.generate_settings_keyboard(USER, message.from_user.id),
     )

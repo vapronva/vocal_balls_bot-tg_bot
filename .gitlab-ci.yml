@@ -28,6 +28,7 @@ build-docker-image:
     - "**/*.py"
     - Dockerfile
     - .gitlab-ci.yml
+    - "locales/*.json"
 
 container_scanning:
   stage: post-test
@@ -40,18 +41,19 @@ container_scanning:
     CS_ANALYZER_IMAGE: "registry.gitlab.com/security-products/container-scanning/grype:5"
     SECURE_LOG_LEVEL: "debug"
 
-# deploy-job:
-#   stage: deploy
-#   image: docker:20-git
-#   script:
-#     - docker-compose -f 'docker-compose.yml' --project-name 'bomedb-vocalballsbot-vapronva' down
-#     - docker-compose -f 'docker-compose.yml' --project-name 'bomedb-vocalballsbot-vapronva' up -d
-#   rules:
-#   - if: $CI_COMMIT_BRANCH == "main"
-#     exists:
-#     - docker-compose.yml
-#     changes:
-#     - docker-compose.yml
-#     - Dockerfile
-#     - .gitlab-ci.yml
-#     - "**/*.py"
+deploy-job:
+  stage: deploy
+  image: docker:20-git
+  script:
+    - docker-compose -f 'docker-compose.yml' --project-name 'bomedb-vocalballsbot-vapronva' down
+    - docker-compose -f 'docker-compose.yml' --project-name 'bomedb-vocalballsbot-vapronva' up -d
+  rules:
+  - if: $CI_COMMIT_BRANCH == "main"
+    exists:
+    - docker-compose.yml
+    changes:
+    - docker-compose.yml
+    - Dockerfile
+    - .gitlab-ci.yml
+    - "**/*.py"
+    - "locales/*.json"
