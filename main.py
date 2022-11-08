@@ -17,6 +17,7 @@ from models import (
     CallbackQueryActionsValues,
 )
 import audioread
+import time
 import uuid
 import sys
 from utils import Utils
@@ -92,7 +93,11 @@ def on_voice_message_private(_, message) -> None:
         user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
     )
     initialLanguage: AvailableLanguages = USER.prefs.language
-    logging.info("Received voice message from user: %s", message.from_user.id)
+    logging.info(
+        "Received voice message from user #%s for message ID #%s",
+        message.from_user.id,
+        message.id,
+    )
     botRepliedMessage = message.reply_text(
         f"__💬 {LOCALE.get(USER.prefs.language, 'voiceMessageReceived')}...__",
         quote=True,
@@ -102,7 +107,19 @@ def on_voice_message_private(_, message) -> None:
         language=initialLanguage,
     )
     outputFile = Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
-    message.download(file_name=outputFile.__str__())
+    try:
+        message.download(file_name=outputFile.__str__())
+    except Exception as e:
+        logging.error(
+            "Error while downloading file for user #%s for message #%s: %s",
+            message.from_user.id,
+            message.id,
+            e,
+        )
+        botRepliedMessage.edit_text(
+            f"__❌ {LOCALE.get(USER.prefs.language, 'errorWhileDownloading')}__\n\n```{e}```"
+        )
+        return
     threadProcessor = threading.Thread(
         target=asyncio.run,
         args=(
@@ -141,6 +158,7 @@ def on_voice_message_private(_, message) -> None:
         rcpapi=RCPAPI if USER.prefs.recasepunc else None,
         language=initialLanguage,
     )
+    startTimeAnalytics = time.time()
     USER = get_user(message.from_user.id)
     if USER.prefs.participateInStatistics:
         USER.prefs.statistics.processedWithLanguage[initialLanguage.value] += 1
@@ -164,6 +182,12 @@ def on_voice_message_private(_, message) -> None:
         user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=USER.name
     )
     outputFile.unlink()
+    logging.info(
+        "Processed voice message analytics and cleaned up for user #%s for message ID #%s in %s seconds",
+        message.from_user.id,
+        message.id,
+        time.time() - startTimeAnalytics,
+    )
     return
 
 
@@ -183,7 +207,7 @@ def on_callback(_, callbackQuery) -> None:
         ):
             USER.prefs.language = AvailableLanguages(callback.actionValue.value)
             logging.debug(
-                "Language changed to %s for #%s", USER.prefs.language, USER.id
+                "Language changed to `%s` for user #%s", USER.prefs.language, USER.id
             )
             APPWRITEUSERS.update_prefs(
                 user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
@@ -207,7 +231,9 @@ def on_callback(_, callbackQuery) -> None:
         ):
             USER.prefs.recasepunc = bool(USER.prefs.recasepunc ^ True)
             logging.debug(
-                "Punctuation changed to %s for #%s", USER.prefs.recasepunc, USER.id
+                "Punctuation changed to `%s` for user #%s",
+                USER.prefs.recasepunc,
+                USER.id,
             )
             APPWRITEUSERS.update_prefs(
                 user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
@@ -231,7 +257,7 @@ def on_callback(_, callbackQuery) -> None:
         ):
             USER.prefs.sendBigTextAsFile = bool(USER.prefs.sendBigTextAsFile ^ True)
             logging.debug(
-                "SendBigTextFile changed to %s for #%s",
+                "SendBigTextFile changed to `%s` for user #%s",
                 USER.prefs.sendBigTextAsFile,
                 USER.id,
             )
@@ -251,7 +277,7 @@ def on_callback(_, callbackQuery) -> None:
             return
         return
     except Exception as e:
-        logging.error(e)
+        logging.error("Error while processing the whole callback: %s", e)
         return
 
 
@@ -259,5 +285,5 @@ if __name__ == "__main__":
     try:
         bot.run()
     except KeyboardInterrupt:
-        logging.info("Exiting the program due to KeyboardInterrupt")
+        logging.debug("Exiting the program due to KeyboardInterrupt")
         sys.exit(0)

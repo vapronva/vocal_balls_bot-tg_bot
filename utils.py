@@ -62,17 +62,19 @@ class Utils:
                 try:
                     resText = Utils.get_formatted_stt_result(results, digitsAfterDot)
                     if len(resText) >= 4096:
-                        resText = resText[:4000] + "..."
+                        resText = resText[:4036] + "..."
                         resText += (
                             "\n\n__⏳ Full message will be sent after processing...__"
                         )
                     message.edit_text(text=resText)
                 except MessageNotModified:
-                    logging.warning("Message not modified for #%s", message.id)
+                    logging.warning("Message not modified for message #%s", message.id)
                     checkEvery = 10
             lastResult = vosk.get_result()
             if vosk.get_finished_status():
-                logging.info("Finished processing audio file for #%s", message.id)
+                logging.info(
+                    "Finished processing audio file for message #%s", message.id
+                )
                 break
             time.sleep(checkEvery)
 
@@ -104,6 +106,12 @@ class Utils:
             textToSend.append(currentPart)
         else:
             textToSend.append(resultingText)
+        logging.debug(
+            "Total resulting messages amount for user #%s and message #%s: %s",
+            user.id,
+            message.id,
+            len(textToSend),
+        )
         if user.prefs.sendBigTextAsFile and len(textToSend) > 1:
             outputFile: Path = (
                 Path("files_download")
@@ -119,13 +127,20 @@ class Utils:
             )
             outputFile.unlink()
             initialMessage.delete()
+            logging.debug(
+                "Sent STT'ed text as a file for user #%s and message #%s",
+                user.id,
+                message.id,
+            )
             return
         for text in textToSend:
             if text == textToSend[0]:
                 try:
                     initialMessage.edit_text(text=text)
                 except MessageNotModified:
-                    logging.warning("Message not modified for #%s", message.id)
+                    logging.warning(
+                        "Initial message not modified for message #%s", message.id
+                    )
             else:
                 message.reply_text(
                     text=text,

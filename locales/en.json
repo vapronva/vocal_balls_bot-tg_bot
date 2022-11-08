@@ -19,5 +19,6 @@
     "settingSendBigTextAsFile": "Send big texts as file",
     "settingSendBigTextAsFileOn": "Turned on",
     "settingSendBigTextAsFileOff": "Turned off",
-    "messageSentAsAFile": "Recognized text sent as a file"
+    "messageSentAsAFile": "Recognized text sent as a file",
+    "errorWhileDownloading": "An error occurred while downloading the file"
 }

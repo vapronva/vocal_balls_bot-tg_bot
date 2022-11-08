@@ -16,7 +16,7 @@ class VoskAPI:
         self.__LANGUAGE = language
         self.__RESULTS: List[SpeechRecognitionVoskPartialResult] = []
         self.__FINISHED_STATUS: bool = False
-        logging.debug("Initialized VoskAPI with endpoint: %s", self.__ENDPOINT)
+        logging.debug("Initialized VoskAPI with endpoint `%s`", self.__ENDPOINT)
 
     def __get_headers(self) -> list:
         return [["X-API-Key", self.__APIKEY]]
@@ -116,12 +116,14 @@ class VoskAPI:
     async def process_audio_file(
         self, audioFile: Path, bytesToReadEveryTime: int = 8000
     ) -> None:
-        logging.debug("Processing audio file: %s", audioFile.__str__())
+        logging.debug("Processing audio file `%s`", audioFile.__str__())
         startTime = time.time()
         async with websockets.connect(  # type: ignore
             self.__ENDPOINT, extra_headers=self.__get_headers()
         ) as websocket:
-            logging.info("Using ffmpeg to convert audio file real-time")
+            logging.debug(
+                "Using ffmpeg to convert audio file real-time to 16kHz and send it to Vosk server"
+            )
             proc = await asyncio.create_subprocess_exec(
                 *self.__get_ffmpeg_arguments(audioFile),
                 stdout=asyncio.subprocess.PIPE,
@@ -134,7 +136,9 @@ class VoskAPI:
                     else None
                 )
                 if data is None:
-                    logging.warning("No data read from ffmpeg subprocess")
+                    logging.warning(
+                        "No data read from the ffmpeg subprocess stdout stream"
+                    )
                     break
                 if len(data) == 0:
                     break
@@ -145,9 +149,11 @@ class VoskAPI:
             await proc.wait()
             self.__set_finished_status(True)
             logging.info(
-                "Took %s seconds to process audio file with %d bytes sent every time",
+                "Took %s seconds to process audio file with %d bytes sent each time for language `%s` and file `%s`",
                 time.time() - startTime,
                 bytesToReadEveryTime,
+                self.__get_language().value,
+                audioFile.__str__(),
             )
             # logging.info("Using native audio file format")
             # waveFile = wave.open(audioFile.__str__(), "rb")

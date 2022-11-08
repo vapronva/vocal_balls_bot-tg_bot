@@ -31,6 +31,9 @@ class RecasepuncResponseModel(BaseModel):
                 .replace(" , ", ", ")
                 .replace(" . ", ". ")
                 .replace(" .", ".")
+                .replace(" - ", "-")
+                .replace(" : ", ": ")
+                .replace(" ; ", "; ")
             )
         return self.result
 

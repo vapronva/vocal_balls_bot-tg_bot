@@ -31,8 +31,9 @@ class RecasepuncAPI:
         )
         if response.status_code == 200:
             logging.debug(
-                "RecasepuncAPI request successful with status code %s",
+                "RecasepuncAPI request successful with status code %s for language `%s`",
                 response.status_code,
+                request.lang.value,
             )
             return RecasepuncResponseModel(**response.json())
         return None

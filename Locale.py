@@ -25,6 +25,7 @@ class SingleLocale(BaseModel):
     settingSendBigTextAsFileOn: str
     settingSendBigTextAsFileOff: str
     messageSentAsAFile: str
+    errorWhileDownloading: str
 
 
 class Locale:

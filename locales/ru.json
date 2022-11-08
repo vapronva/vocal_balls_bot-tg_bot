@@ -19,5 +19,6 @@
     "settingSendBigTextAsFile": "Отправлять большие тексты как файл",
     "settingSendBigTextAsFileOn": "Включено",
     "settingSendBigTextAsFileOff": "Выключено",
-    "messageSentAsAFile": "Распознанный текст был отправлен как файл"
+    "messageSentAsAFile": "Распознанный текст был отправлен как файл",
+    "errorWhileDownloading": "Произошла ошибка при загрузке файла"
 }
