@@ -1,10 +1,8 @@
 stages:
-  - validate
   - test
-  - build
+  - build-image
   - post-test
   - deploy
-  - cleanup
 
 sast:
   stage: test
@@ -13,22 +11,9 @@ include:
 - template: Security/SAST-IaC.latest.gitlab-ci.yml
 - template: Security/Secret-Detection.gitlab-ci.yml
 - template: Security/Container-Scanning.gitlab-ci.yml
-- template: Jobs/SAST-IaC.gitlab-ci.yml
-- template: Terraform/Base.gitlab-ci.yml
-
-fmt:
-  extends: .terraform:fmt
-  needs: []
-
-validate:
-  extends: .terraform:validate
-  needs: []
-
-build:
-  extends: .terraform:build
 
 build-docker-image:
-  stage: build
+  stage: build-image
   image: docker:20-git
   script:
     - docker build -t $CI_REGISTRY_IMAGE/bot:latest .
@@ -72,10 +57,3 @@ deploy-job:
     - .gitlab-ci.yml
     - "**/*.py"
     - "locales/*.json"
-
-deploy:
-  extends: .terraform:deploy
-  dependencies:
-    - build
-  environment:
-    name: $TF_STATE_NAME
