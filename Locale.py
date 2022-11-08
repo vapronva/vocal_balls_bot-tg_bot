@@ -12,6 +12,8 @@ class SingleLocale(BaseModel):
     settingsLanguageRussian: str
     settingsLanguageEnglish: str
     settingsPunctuation: str
+    settingsPunctuationOn: str
+    settingsPunctuationOff: str
     settingsParticipateInStatistics: str
     settingsHowMany: str
     settingsHowManyMessagesReceived: str
@@ -19,6 +21,10 @@ class SingleLocale(BaseModel):
     settingsHowManyCharactersProcessed: str
     settingsHowManySecondsOfAudioProcessed: str
     settingsDigitsAfterDot: str
+    settingSendBigTextAsFile: str
+    settingSendBigTextAsFileOn: str
+    settingSendBigTextAsFileOff: str
+    messageSentAsAFile: str
 
 
 class Locale:

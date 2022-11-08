@@ -51,6 +51,7 @@ class UserPreferencesModel(BaseModel):
     language: AvailableLanguages = AvailableLanguages.EN
     recasepunc: bool = True
     participateInStatistics: bool = True
+    sendBigTextAsFile: bool = True
     statistics: UserStatisticsModel = UserStatisticsModel()
 
 
@@ -71,12 +72,15 @@ class CallbackQueryActionTypes(Enum):
 
 class CallbackQueryActionsObjects(Enum):
     LANGUAGE = "lang"
+    PUNCTUATION = "punc"
+    SENDBIGTEXTASFILE = "sbta"
 
 
 class CallbackQueryActionsValues(Enum):
     RUSSIAN = "ru"
     ENGLISH = "en"
     NOTHING = "none"
+    TOGGLE = "toggle"
 
 
 class CallbackQueryDataModel(BaseModel):

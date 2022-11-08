@@ -151,12 +151,12 @@ def on_voice_message_private(_, message):
         )
         return
     Utils.send_stt_result_with_respecting_max_message_length(
-        message,
-        botRepliedMessage,
-        vosk,
-        RCPAPI if USER.prefs.recasepunc else None,
-        USER.prefs.howManyDigitsAfterDot,
-        initialLanguage,
+        message=message,
+        initialMessage=botRepliedMessage,
+        vosk=vosk,
+        user=USER,
+        rcpapi=RCPAPI if USER.prefs.recasepunc else None,
+        language=initialLanguage,
     )
 
 
@@ -184,7 +184,57 @@ def on_callback(_, callbackQuery):
             )
             try:
                 callbackQuery.edit_message_text(
-                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b>",
+                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
+                    reply_markup=Utils.generate_settings_keyboard(
+                        USER, callbackQuery.from_user.id
+                    ),
+                )
+            except MessageNotModified:
+                pass
+            return
+        if (
+            callback.actionType == CallbackQueryActionTypes.ACTION
+            and callback.actionObject == CallbackQueryActionsObjects.PUNCTUATION
+            and callback.actionValue == CallbackQueryActionsValues.TOGGLE
+            and not callback.actionValue == CallbackQueryActionsValues.NOTHING
+        ):
+            USER.prefs.recasepunc = bool(USER.prefs.recasepunc ^ True)
+            logging.debug(
+                "Punctuation changed to %s for #%s", USER.prefs.recasepunc, USER.id
+            )
+            APPWRITEUSERS.update_prefs(
+                user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
+                prefs=USER.prefs.dict(),
+            )
+            try:
+                callbackQuery.edit_message_text(
+                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
+                    reply_markup=Utils.generate_settings_keyboard(
+                        USER, callbackQuery.from_user.id
+                    ),
+                )
+            except MessageNotModified:
+                pass
+            return
+        if (
+            callback.actionType == CallbackQueryActionTypes.ACTION
+            and callback.actionObject == CallbackQueryActionsObjects.SENDBIGTEXTASFILE
+            and callback.actionValue == CallbackQueryActionsValues.TOGGLE
+            and not callback.actionValue == CallbackQueryActionsValues.NOTHING
+        ):
+            USER.prefs.sendBigTextAsFile = bool(USER.prefs.sendBigTextAsFile ^ True)
+            logging.debug(
+                "SendBigTextFile changed to %s for #%s",
+                USER.prefs.sendBigTextAsFile,
+                USER.id,
+            )
+            APPWRITEUSERS.update_prefs(
+                user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
+                prefs=USER.prefs.dict(),
+            )
+            try:
+                callbackQuery.edit_message_text(
+                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
                     reply_markup=Utils.generate_settings_keyboard(
                         USER, callbackQuery.from_user.id
                     ),

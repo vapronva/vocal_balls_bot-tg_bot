@@ -14,6 +14,8 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQ
 from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 import time
 import logging
+from pathlib import Path
+import uuid
 from ReCasePuncAPI import RecasepuncAPI
 from config import AvailableLanguages
 from Locale import LOCALE
@@ -67,6 +69,7 @@ class Utils:
                     message.edit_text(text=resText)
                 except MessageNotModified:
                     logging.warning("Message not modified for #%s", message.id)
+                    checkEvery = 10
             lastResult = vosk.get_result()
             if vosk.get_finished_status():
                 logging.info("Finished processing audio file for #%s", message.id)
@@ -78,25 +81,45 @@ class Utils:
         message: PyrogramTypeMessage,
         initialMessage: PyrogramTypeMessage,
         vosk: VoskAPI,
+        user: UserModel,
         rcpapi: Optional[RecasepuncAPI] = None,
-        digitsAfterDot: int = 1,
         language: AvailableLanguages = AvailableLanguages.RU,
+        textLimitPerMessage: int = 4096,
     ) -> None:
         results = vosk.get_results()
         resultingText = Utils.get_formatted_stt_result(
-            results, rcpapi=rcpapi, language=language, digitsAfterDot=digitsAfterDot
+            results,
+            rcpapi=rcpapi,
+            language=language,
+            digitsAfterDot=user.prefs.howManyDigitsAfterDot,
         )
         textToSend: List[str] = []
-        if len(resultingText) >= 4096:
+        if len(resultingText) >= textLimitPerMessage:
             currentPart = ""
             for line in resultingText.splitlines():
-                if len(currentPart) + len(line) >= 4096:
+                if len(currentPart) + len(line) >= textLimitPerMessage:
                     textToSend.append(currentPart)
                     currentPart = ""
                 currentPart += line + "\n"
             textToSend.append(currentPart)
         else:
             textToSend.append(resultingText)
+        if user.prefs.sendBigTextAsFile and len(textToSend) > 1:
+            outputFile: Path = (
+                Path("files_download")
+                / f"{user.id.replace('-', '')}-{uuid.uuid4().__str__().replace('-', '')}.txt"
+            )
+            with open(outputFile, "w") as f:
+                f.write(resultingText)
+            message.reply_document(
+                document=outputFile.__str__(),
+                caption=f"📄 __{LOCALE.get(user.prefs.language, 'messageSentAsAFile')}__",
+                file_name=outputFile.name,
+                quote=True,
+            )
+            outputFile.unlink()
+            initialMessage.delete()
+            return
         for text in textToSend:
             if text == textToSend[0]:
                 try:
@@ -104,8 +127,14 @@ class Utils:
                 except MessageNotModified:
                     logging.warning("Message not modified for #%s", message.id)
             else:
-                message.reply_text(text=text, quote=True)
+                message.reply_text(
+                    text=text,
+                    quote=True,
+                    disable_web_page_preview=True,
+                    disable_notification=True,
+                )
                 time.sleep(0.5)
+        return
 
     @staticmethod
     def generate_settings_keyboard(
@@ -129,6 +158,38 @@ class Utils:
                 )
             )
         resultingKeyboard.append(secondRow)
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"📝 {LOCALE.get(user.prefs.language, 'settingsPunctuation')}",
+                    callback_data=f"vclblls-sttc-punc-none-{telegramUserID}",
+                )
+            ]
+        )
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"{LOCALE.get(user.prefs.language, 'settingsPunctuationOn') if user.prefs.recasepunc else LOCALE.get(user.prefs.language, 'settingsPunctuationOff')} {'✅' if user.prefs.recasepunc else '❌'}",
+                    callback_data=f"vclblls-actn-punc-toggle-{telegramUserID}",
+                )
+            ]
+        )
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"📑 {LOCALE.get(user.prefs.language, 'settingSendBigTextAsFile')}",
+                    callback_data=f"vclblls-sttc-sbta-none-{telegramUserID}",
+                )
+            ]
+        )
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"{LOCALE.get(user.prefs.language, 'settingSendBigTextAsFileOn') if user.prefs.sendBigTextAsFile else LOCALE.get(user.prefs.language, 'settingSendBigTextAsFileOff')} {'✅' if user.prefs.sendBigTextAsFile else '❌'}",
+                    callback_data=f"vclblls-actn-sbta-toggle-{telegramUserID}",
+                )
+            ]
+        )
         return InlineKeyboardMarkup(resultingKeyboard)
 
     @staticmethod
