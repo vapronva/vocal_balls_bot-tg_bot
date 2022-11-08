@@ -65,27 +65,32 @@ def get_user(user_id: int) -> UserModel:
 
 
 @bot.on_message(PyrogramFilters.command("settings") & PyrogramFilters.private)
-def on_settings_command(_, message):
+def on_settings_command(_, message) -> None:
     USER = get_user(message.from_user.id)
     message.reply_text(
         f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
         quote=True,
         reply_markup=Utils.generate_settings_keyboard(USER, message.from_user.id),
     )
+    return
 
 
 @bot.on_message(PyrogramFilters.command("stats") & PyrogramFilters.private)
-def on_stats_command(_, message):
+def on_stats_command(_, message) -> None:
     USER = get_user(message.from_user.id)
     message.reply_text(
         Utils.generate_statistics_text(USER), quote=True, disable_web_page_preview=True
     )
+    return
 
 
 @bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
-def on_voice_message_private(_, message):
+def on_voice_message_private(_, message) -> None:
     USER = get_user(message.from_user.id)
     USER.prefs.statistics.messagesReceived += 1
+    APPWRITEUSERS.update_prefs(
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
+    )
     initialLanguage: AvailableLanguages = USER.prefs.language
     logging.info("Received voice message from user: %s", message.from_user.id)
     botRepliedMessage = message.reply_text(
@@ -123,28 +128,6 @@ def on_voice_message_private(_, message):
     threadProcessor.join()
     threadTelegramMessageEditor.join()
     results = vosk.get_results()
-    if USER.prefs.participateInStatistics:
-        USER.prefs.statistics.processedWithLanguage[initialLanguage.value] += 1
-        USER.prefs.statistics.messagesProcessed += 1
-        USER.prefs.statistics.charactersProcessed += sum(
-            len(resultResult.text) for resultResult in results
-        )
-        fileOggType = audioread.audio_open(outputFile.__str__())
-        USER.prefs.statistics.secondsOfAudioProcessed += (
-            int(fileOggType.duration) if fileOggType.duration else 0
-        )
-    outputFile.unlink()
-    USER.name = (
-        f"{message.from_user.first_name} {message.from_user.last_name} (@{message.from_user.username})"
-        if message.from_user.username is not None
-        else f"{message.from_user.first_name} {message.from_user.last_name} (null)"
-    )
-    APPWRITEUSERS.update_name(
-        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=USER.name
-    )
-    APPWRITEUSERS.update_prefs(
-        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
-    )
     if results is None or len(results) == 0:
         botRepliedMessage.edit_text(
             text=f"__⚠️ {LOCALE.get(USER.prefs.language, 'noWordsFound')}!__"
@@ -158,10 +141,34 @@ def on_voice_message_private(_, message):
         rcpapi=RCPAPI if USER.prefs.recasepunc else None,
         language=initialLanguage,
     )
+    USER = get_user(message.from_user.id)
+    if USER.prefs.participateInStatistics:
+        USER.prefs.statistics.processedWithLanguage[initialLanguage.value] += 1
+        USER.prefs.statistics.messagesProcessed += 1
+        USER.prefs.statistics.charactersProcessed += sum(
+            len(resultResult.text) for resultResult in results
+        )
+        fileOggType = audioread.audio_open(outputFile.__str__())
+        USER.prefs.statistics.secondsOfAudioProcessed += (
+            int(fileOggType.duration) if fileOggType.duration else 0
+        )
+    APPWRITEUSERS.update_prefs(
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
+    )
+    USER.name = (
+        f"{message.from_user.first_name} {message.from_user.last_name} (@{message.from_user.username})"
+        if message.from_user.username is not None
+        else f"{message.from_user.first_name} {message.from_user.last_name} (null)"
+    )
+    APPWRITEUSERS.update_name(
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=USER.name
+    )
+    outputFile.unlink()
+    return
 
 
 @bot.on_callback_query()
-def on_callback(_, callbackQuery):
+def on_callback(_, callbackQuery) -> None:
     callback = Utils.check_callback_query(callbackQuery)
     if callback is None:
         return
