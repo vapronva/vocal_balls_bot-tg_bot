@@ -17,7 +17,7 @@ from ReCasePuncAPI import RecasepuncAPI
 
 class MESSAGE_TYPES_FILTRED(Enum):
     VOICE = "voice"
-    DOCUMENT = "document"
+    AUDIO = "audio"
 
 
 class STTPipeline:
@@ -47,7 +47,7 @@ class STTPipeline:
             self.message.id,
         )
         self.botRepliedMessage: PyrogramMessage = self.message.reply_text(
-            f"__💬 {LOCALE.get(self.user.prefs.language, 'voiceMessageReceived') if self.messageType.VOICE else LOCALE.get(self.user.prefs.language, 'fileMessageReceived')}...__",
+            f"__💬 {LOCALE.get(self.user.prefs.language, 'voiceMessageReceived') if self.messageType == MESSAGE_TYPES_FILTRED.VOICE else LOCALE.get(self.user.prefs.language, 'fileMessageReceived')}...__",
             quote=True,
         )  # type: ignore
 
@@ -70,9 +70,9 @@ class STTPipeline:
         )
         self.outputFile = (
             Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
-            if self.messageType.VOICE
+            if self.messageType == MESSAGE_TYPES_FILTRED.VOICE
             else Path(
-                f"files_download/{uuid.uuid4().__str__().replace('-', '')[:16]}-{self.message.document.file_name.replace(' ', '_').replace('/', '_').replace('-', '_')}"
+                f"files_download/{uuid.uuid4().__str__().replace('-', '')[:16]}-{self.message.audio.file_name.replace(' ', '_').replace('/', '_').replace('-', '_')}"
             )
         )
 
@@ -113,7 +113,7 @@ class STTPipeline:
         threadProcessor.start()
         threadTelegramMessageEditor.start()
         _ = self.botRepliedMessage.edit_text(
-            text=f"__🔁 {LOCALE.get(self.user.prefs.language, 'voiceMessageProcessing') if self.messageType.VOICE else LOCALE.get(self.user.prefs.language, 'fileMessageProcessing')}...__"
+            text=f"__🔁 {LOCALE.get(self.user.prefs.language, 'voiceMessageProcessing') if self.messageType == MESSAGE_TYPES_FILTRED.VOICE else LOCALE.get(self.user.prefs.language, 'fileMessageProcessing')}...__"
         )
         threadProcessor.join()
         threadTelegramMessageEditor.join()
@@ -156,7 +156,8 @@ class STTPipeline:
         )
         self.outputFile.unlink()
         logging.info(
-            "Processed voice message analytics and cleaned up for user #%s for message ID #%s in %s seconds",
+            "Processed %s message analytics and cleaned up for user #%s for message ID #%s in %s seconds",
+            self.messageType.value,
             self.message.from_user.id,
             self.message.id,
             time.time() - startTimeAnalytics,

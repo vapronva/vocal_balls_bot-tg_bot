@@ -79,19 +79,13 @@ def on_stats_command(_, message) -> None:
     return
 
 
-@bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
-def on_voice_message_private(_, message: PyrogramMessage) -> None:
-    STTP = STTPipeline(
-        messageType=MESSAGE_TYPES_FILTRED.VOICE,
-        message=message,
-        user=get_user(message.from_user.id),
-        config=CONFIG,
-    )
+def internal_voice_pipeline(STTP: STTPipeline, message: PyrogramMessage) -> None:
     APPWRITEUSERS.update_prefs(
         user_id=f"tlgrm-vocalballsbot-{message.from_user.id}",
         prefs=STTP.get_user().prefs.dict(),
     )
-    STTP.run()
+    if STTP.run() != 0:
+        return
     STTP.analytics(get_user(message.from_user.id))
     APPWRITEUSERS.update_prefs(
         user_id=f"tlgrm-vocalballsbot-{message.from_user.id}",
@@ -100,6 +94,30 @@ def on_voice_message_private(_, message: PyrogramMessage) -> None:
     APPWRITEUSERS.update_name(
         user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=STTP.get_user().name
     )
+    return
+
+
+@bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
+def on_voice_message_private(_, message: PyrogramMessage) -> None:
+    STTP = STTPipeline(
+        messageType=MESSAGE_TYPES_FILTRED.VOICE,
+        message=message,
+        user=get_user(message.from_user.id),
+        config=CONFIG,
+    )
+    internal_voice_pipeline(STTP, message)
+    return
+
+
+@bot.on_message(PyrogramFilters.audio & PyrogramFilters.private)
+def on_audio_message_private(_, message: PyrogramMessage) -> None:
+    STTP = STTPipeline(
+        messageType=MESSAGE_TYPES_FILTRED.AUDIO,
+        message=message,
+        user=get_user(message.from_user.id),
+        config=CONFIG,
+    )
+    internal_voice_pipeline(STTP, message)
     return
 
 

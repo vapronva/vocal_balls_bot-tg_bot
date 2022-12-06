@@ -62,7 +62,7 @@ class Utils:
                 try:
                     resText = Utils.get_formatted_stt_result(results, digitsAfterDot)
                     if len(resText) >= 4096:
-                        resText = resText[:4036] + "..."
+                        resText = resText[:4000] + "..."
                         resText += f"\n\n__⏳ {LOCALE.get(vosk.get_language(), 'fullMessageAfterProcessing')}...__"
                     _ = message.edit_text(text=resText)
                 except MessageNotModified:
@@ -116,7 +116,11 @@ class Utils:
                 / f"{user.id.replace('-', '')}-{uuid.uuid4().__str__().replace('-', '')}.txt"
             )
             with open(outputFile, "w") as f:
-                f.write(resultingText)
+                f.write(
+                    resultingText.replace(":__", ":")
+                    .replace("__", "", 1)
+                    .replace("__", "\n")
+                )
             _ = message.reply_document(
                 document=outputFile.__str__(),
                 caption=f"📄 __{LOCALE.get(user.prefs.language, 'messageSentAsAFile')}__",
