@@ -30,6 +30,7 @@ class SingleLocale(BaseModel):
     settingSendSubtitlesOn: str
     settingSendSubtitlesOff: str
     messageSentAsAFile: str
+    messageSentAsAFileWithSubtitles: str
     errorWhileDownloading: str
     fullMessageAfterProcessing: str
 

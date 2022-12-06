@@ -25,6 +25,7 @@
     "settingSendSubtitlesOn": "Включено",
     "settingSendSubtitlesOff": "Выключено",
     "messageSentAsAFile": "Распознанный текст был отправлен как файл",
+    "messageSentAsAFileWithSubtitles": "Распознанный текст был отправлен как файл с VTT субтитрами",
     "errorWhileDownloading": "Произошла ошибка при загрузке файла",
     "fullMessageAfterProcessing": "Полное сообщение будет отправлено после обработки"
 }

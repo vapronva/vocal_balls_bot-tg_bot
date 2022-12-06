@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List, Optional
+from typing import Optional
 import websockets
 from config import AvailableLanguages, Config
 from models import SpeechRecognitionVoskPartialResult
@@ -14,7 +14,7 @@ class VoskAPI:
         self.__ENDPOINT = Config.get_vosk_endpoint(language)
         self.__APIKEY = apiKey
         self.__LANGUAGE = language
-        self.__RESULTS: List[SpeechRecognitionVoskPartialResult] = []
+        self.__RESULTS: list[SpeechRecognitionVoskPartialResult] = []
         self.__FINISHED_STATUS: bool = False
         logging.debug("Initialized VoskAPI with endpoint `%s`", self.__ENDPOINT)
 
@@ -96,7 +96,7 @@ class VoskAPI:
         if result is not None:
             self.__RESULTS.append(result)
 
-    def get_results(self) -> List[SpeechRecognitionVoskPartialResult]:
+    def get_results(self) -> list[SpeechRecognitionVoskPartialResult]:
         return self.__RESULTS
 
     def get_result(

@@ -25,6 +25,7 @@
     "settingSendSubtitlesOn": "Turned on",
     "settingSendSubtitlesOff": "Turned off",
     "messageSentAsAFile": "Recognized text sent as a file",
+    "messageSentAsAFileWithSubtitles": "Recognized text sent as a file with VTT subtitles",
     "errorWhileDownloading": "An error occurred while downloading the file",
     "fullMessageAfterProcessing": "Full message will be sent after processing"
 }

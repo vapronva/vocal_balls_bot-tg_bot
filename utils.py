@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Optional
 from VoskAPI import VoskAPI
 from models import (
     SpeechRecognitionVoskPartialResult,
@@ -19,16 +19,17 @@ import uuid
 from ReCasePuncAPI import RecasepuncAPI
 from config import AvailableLanguages
 from Locale import LOCALE
+from subtitles import genereate_vtt_subs
 
 
 class Utils:
     @staticmethod
     def get_formatted_stt_result(
-        results: List[SpeechRecognitionVoskPartialResult],
+        results: list[SpeechRecognitionVoskPartialResult],
         digitsAfterDot: int = 1,
         rcpapi: Optional[RecasepuncAPI] = None,
         language: AvailableLanguages = AvailableLanguages.RU,
-    ) -> str:
+    ) -> tuple[str, list[SpeechRecognitionVoskPartialResult]]:
         resultingString: str = ""
         for partialResult in results:
             try:
@@ -41,12 +42,15 @@ class Utils:
                         )
                     ).fix_result_apostrophe()  # type: ignore
                 )
+                results[results.index(partialResult)].text = (
+                    formattedText if formattedText else partialResult.text
+                )
             except AttributeError:
                 formattedText = partialResult.text
             resultingString += f"""__{round(partialResult.startTime, digitsAfterDot) if int(partialResult.startTime) != 0 else int(partialResult.startTime)} → {round(partialResult.endTime, digitsAfterDot)}:__
 {formattedText}
 """
-        return resultingString
+        return resultingString, results
 
     @staticmethod
     def update_stt_result_as_everything_comes_in(
@@ -60,7 +64,7 @@ class Utils:
             results = vosk.get_results()
             if results is not None and len(results) > 0 and lastResult != results[-1]:
                 try:
-                    resText = Utils.get_formatted_stt_result(results, digitsAfterDot)
+                    resText, _ = Utils.get_formatted_stt_result(results, digitsAfterDot)
                     if len(resText) >= 4096:
                         resText = resText[:4000] + "..."
                         resText += f"\n\n__⏳ {LOCALE.get(vosk.get_language(), 'fullMessageAfterProcessing')}...__"
@@ -87,13 +91,13 @@ class Utils:
         textLimitPerMessage: int = 4096,
     ) -> None:
         results = vosk.get_results()
-        resultingText = Utils.get_formatted_stt_result(
+        resultingText, updatedResults = Utils.get_formatted_stt_result(
             results,
             rcpapi=rcpapi,
             language=language,
             digitsAfterDot=user.prefs.howManyDigitsAfterDot,
         )
-        textToSend: List[str] = []
+        textToSend: list[str] = []
         if len(resultingText) >= textLimitPerMessage:
             currentPart = ""
             for line in resultingText.splitlines():
@@ -110,6 +114,20 @@ class Utils:
             message.id,
             len(textToSend),
         )
+        if user.prefs.sendSubtitles:
+            subsFilePath: Path = (
+                Path("files_download")
+                / f"{user.id.replace('-', '')}-{uuid.uuid4().__str__().replace('-', '')}.vtt"
+            )
+            with open(subsFilePath, "w") as f:
+                f.write(genereate_vtt_subs(updatedResults))
+            _ = message.reply_document(
+                document=subsFilePath.__str__(),
+                caption=f"📄 __{LOCALE.get(user.prefs.language, 'messageSentAsAFileWithSubtitles')}__",
+                file_name=subsFilePath.name,
+                quote=True,
+            )
+            subsFilePath.unlink()
         if user.prefs.sendBigTextAsFile and len(textToSend) > 1:
             outputFile: Path = (
                 Path("files_download")
@@ -157,7 +175,7 @@ class Utils:
     def generate_settings_keyboard(
         user: UserModel, telegramUserID: int
     ) -> InlineKeyboardMarkup:
-        resultingKeyboard: List[List[InlineKeyboardButton]] = []
+        resultingKeyboard: list[list[InlineKeyboardButton]] = []
         resultingKeyboard.append(
             [
                 InlineKeyboardButton(
@@ -166,7 +184,7 @@ class Utils:
                 )
             ]
         )
-        secondRow: List[InlineKeyboardButton] = []
+        secondRow: list[InlineKeyboardButton] = []
         for language in [AvailableLanguages.RU, AvailableLanguages.EN]:
             secondRow.append(
                 InlineKeyboardButton(
