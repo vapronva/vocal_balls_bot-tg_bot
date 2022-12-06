@@ -9,7 +9,7 @@ from models import (
     CallbackQueryActionsObjects,
     CallbackQueryActionsValues,
 )
-from pyrogram.types import Message as PyrogramTypeMessage
+from pyrogram.types import Message as PyrogramMessage
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, CallbackQuery
 from pyrogram.errors.exceptions.bad_request_400 import MessageNotModified
 import time
@@ -50,7 +50,7 @@ class Utils:
 
     @staticmethod
     def update_stt_result_as_everything_comes_in(
-        message: PyrogramTypeMessage,
+        message: PyrogramMessage,
         vosk: VoskAPI,
         digitsAfterDot: int = 1,
         checkEvery: float = 2,
@@ -63,10 +63,8 @@ class Utils:
                     resText = Utils.get_formatted_stt_result(results, digitsAfterDot)
                     if len(resText) >= 4096:
                         resText = resText[:4036] + "..."
-                        resText += (
-                            "\n\n__⏳ Full message will be sent after processing...__"
-                        )
-                    message.edit_text(text=resText)
+                        resText += f"\n\n__⏳ {LOCALE.get(vosk.get_language(), 'fullMessageAfterProcessing')}...__"
+                    _ = message.edit_text(text=resText)
                 except MessageNotModified:
                     logging.warning("Message not modified for message #%s", message.id)
                     checkEvery = 10
@@ -80,8 +78,8 @@ class Utils:
 
     @staticmethod
     def send_stt_result_with_respecting_max_message_length(
-        message: PyrogramTypeMessage,
-        initialMessage: PyrogramTypeMessage,
+        message: PyrogramMessage,
+        initialMessage: PyrogramMessage,
         vosk: VoskAPI,
         user: UserModel,
         rcpapi: Optional[RecasepuncAPI] = None,
@@ -119,14 +117,14 @@ class Utils:
             )
             with open(outputFile, "w") as f:
                 f.write(resultingText)
-            message.reply_document(
+            _ = message.reply_document(
                 document=outputFile.__str__(),
                 caption=f"📄 __{LOCALE.get(user.prefs.language, 'messageSentAsAFile')}__",
                 file_name=outputFile.name,
                 quote=True,
             )
             outputFile.unlink()
-            initialMessage.delete()
+            _ = initialMessage.delete()
             logging.debug(
                 "Sent STT'ed text as a file for user #%s and message #%s",
                 user.id,
@@ -136,13 +134,13 @@ class Utils:
         for text in textToSend:
             if text == textToSend[0]:
                 try:
-                    initialMessage.edit_text(text=text)
+                    _ = initialMessage.edit_text(text=text)
                 except MessageNotModified:
                     logging.warning(
                         "Initial message not modified for message #%s", message.id
                     )
             else:
-                message.reply_text(
+                _ = message.reply_text(
                     text=text,
                     quote=True,
                     disable_web_page_preview=True,
@@ -202,6 +200,22 @@ class Utils:
                 InlineKeyboardButton(
                     f"{LOCALE.get(user.prefs.language, 'settingSendBigTextAsFileOn') if user.prefs.sendBigTextAsFile else LOCALE.get(user.prefs.language, 'settingSendBigTextAsFileOff')} {'✅' if user.prefs.sendBigTextAsFile else '❌'}",
                     callback_data=f"vclblls-actn-sbta-toggle-{telegramUserID}",
+                )
+            ]
+        )
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"💬 {LOCALE.get(user.prefs.language, 'settingSendSubtitles')}",
+                    callback_data=f"vclblls-sttc-ssub-none-{telegramUserID}",
+                )
+            ]
+        )
+        resultingKeyboard.append(
+            [
+                InlineKeyboardButton(
+                    f"{LOCALE.get(user.prefs.language, 'settingSendSubtitlesOn') if user.prefs.sendSubtitles else LOCALE.get(user.prefs.language, 'settingSendSubtitlesOff')} {'✅' if user.prefs.sendSubtitles else '❌'}",
+                    callback_data=f"vclblls-actn-ssub-toggle-{telegramUserID}",
                 )
             ]
         )

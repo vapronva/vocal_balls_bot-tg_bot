@@ -1,6 +1,8 @@
 {
     "voiceMessageReceived": "Received your voice message",
+    "fileMessageReceived": "Received your audio file",
     "voiceMessageProcessing": "Processing your voice message",
+    "fileMessageProcessing": "Processing your audio file",
     "noWordsFound": "No words recognized",
     "settings": "Settings",
     "settingsLanguage": "Language",
@@ -19,6 +21,10 @@
     "settingSendBigTextAsFile": "Send big texts as file",
     "settingSendBigTextAsFileOn": "Turned on",
     "settingSendBigTextAsFileOff": "Turned off",
+    "settingSendSubtitles": "Send VTT subtitles",
+    "settingSendSubtitlesOn": "Turned on",
+    "settingSendSubtitlesOff": "Turned off",
     "messageSentAsAFile": "Recognized text sent as a file",
-    "errorWhileDownloading": "An error occurred while downloading the file"
+    "errorWhileDownloading": "An error occurred while downloading the file",
+    "fullMessageAfterProcessing": "Full message will be sent after processing"
 }

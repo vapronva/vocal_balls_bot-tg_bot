@@ -55,6 +55,7 @@ class UserPreferencesModel(BaseModel):
     recasepunc: bool = True
     participateInStatistics: bool = True
     sendBigTextAsFile: bool = True
+    sendSubtitles: bool = True
     statistics: UserStatisticsModel = UserStatisticsModel()
 
 
@@ -77,6 +78,7 @@ class CallbackQueryActionsObjects(Enum):
     LANGUAGE = "lang"
     PUNCTUATION = "punc"
     SENDBIGTEXTASFILE = "sbta"
+    SENDSUBTITLES = "ssub"
 
 
 class CallbackQueryActionsValues(Enum):

@@ -6,6 +6,7 @@ from pathlib import Path
 import logging
 from pyrogram import Client as BotClient  # type: ignore
 from pyrogram import filters as PyrogramFilters
+from pyrogram.types import Message as PyrogramMessage
 from pyrogram.errors import MessageNotModified
 from appwrite.client import Client as AppWriteClient
 from appwrite.services.users import Users as AppWriteUsers
@@ -55,9 +56,13 @@ APPWRITEUSERS = AppWriteUsers(APPWRITECLIENT)
 def get_user(user_id: int) -> UserModel:
     INTERNAL_ID = f"tlgrm-vocalballsbot-{user_id}"
     try:
-        USER: UserModel = UserModel(**APPWRITEUSERS.get(user_id=INTERNAL_ID))
+        USER: UserModel = UserModel(
+            **APPWRITEUSERS.get(user_id=INTERNAL_ID)  # type: ignore
+        )
     except AppwriteException:
-        USER: UserModel = UserModel(**APPWRITEUSERS.create(user_id=INTERNAL_ID))
+        USER: UserModel = UserModel(
+            **APPWRITEUSERS.create(user_id=INTERNAL_ID)  # type: ignore
+        )
         APPWRITEUSERS.update_prefs(
             user_id=f"tlgrm-vocalballsbot-{user_id}",
             prefs=USER.prefs.dict(),
@@ -86,7 +91,8 @@ def on_stats_command(_, message) -> None:
 
 
 @bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
-def on_voice_message_private(_, message) -> None:
+def on_voice_message_private(_, message: PyrogramMessage) -> None:
+    logging.info("Message type: %s", type(message))
     USER = get_user(message.from_user.id)
     USER.prefs.statistics.messagesReceived += 1
     APPWRITEUSERS.update_prefs(
@@ -98,17 +104,17 @@ def on_voice_message_private(_, message) -> None:
         message.from_user.id,
         message.id,
     )
-    botRepliedMessage = message.reply_text(
+    botRepliedMessage: PyrogramMessage = message.reply_text(
         f"__💬 {LOCALE.get(USER.prefs.language, 'voiceMessageReceived')}...__",
         quote=True,
-    )
+    )  # type: ignore
     vosk = VoskAPI(
         apiKey=CONFIG.get_vosk_api_key(),
         language=initialLanguage,
     )
     outputFile = Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
     try:
-        message.download(file_name=outputFile.__str__())
+        _ = message.download(file_name=outputFile.__str__())
     except Exception as e:
         logging.error(
             "Error while downloading file for user #%s for message #%s: %s",
@@ -116,7 +122,7 @@ def on_voice_message_private(_, message) -> None:
             message.id,
             e,
         )
-        botRepliedMessage.edit_text(
+        _ = botRepliedMessage.edit_text(
             f"__❌ {LOCALE.get(USER.prefs.language, 'errorWhileDownloading')}__\n\n```{e}```"
         )
         return
@@ -139,14 +145,14 @@ def on_voice_message_private(_, message) -> None:
     )
     threadProcessor.start()
     threadTelegramMessageEditor.start()
-    botRepliedMessage.edit_text(
+    _ = botRepliedMessage.edit_text(
         text=f"__🔁 {LOCALE.get(USER.prefs.language, 'voiceMessageProcessing')}...__"
     )
     threadProcessor.join()
     threadTelegramMessageEditor.join()
     results = vosk.get_results()
     if results is None or len(results) == 0:
-        botRepliedMessage.edit_text(
+        _ = botRepliedMessage.edit_text(
             text=f"__⚠️ {LOCALE.get(USER.prefs.language, 'noWordsFound')}!__"
         )
         return
@@ -209,21 +215,7 @@ def on_callback(_, callbackQuery) -> None:
             logging.debug(
                 "Language changed to `%s` for user #%s", USER.prefs.language, USER.id
             )
-            APPWRITEUSERS.update_prefs(
-                user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
-                prefs=USER.prefs.dict(),
-            )
-            try:
-                callbackQuery.edit_message_text(
-                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
-                    reply_markup=Utils.generate_settings_keyboard(
-                        USER, callbackQuery.from_user.id
-                    ),
-                )
-            except MessageNotModified:
-                pass
-            return
-        if (
+        elif (
             callback.actionType == CallbackQueryActionTypes.ACTION
             and callback.actionObject == CallbackQueryActionsObjects.PUNCTUATION
             and callback.actionValue == CallbackQueryActionsValues.TOGGLE
@@ -235,21 +227,7 @@ def on_callback(_, callbackQuery) -> None:
                 USER.prefs.recasepunc,
                 USER.id,
             )
-            APPWRITEUSERS.update_prefs(
-                user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
-                prefs=USER.prefs.dict(),
-            )
-            try:
-                callbackQuery.edit_message_text(
-                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
-                    reply_markup=Utils.generate_settings_keyboard(
-                        USER, callbackQuery.from_user.id
-                    ),
-                )
-            except MessageNotModified:
-                pass
-            return
-        if (
+        elif (
             callback.actionType == CallbackQueryActionTypes.ACTION
             and callback.actionObject == CallbackQueryActionsObjects.SENDBIGTEXTASFILE
             and callback.actionValue == CallbackQueryActionsValues.TOGGLE
@@ -261,20 +239,31 @@ def on_callback(_, callbackQuery) -> None:
                 USER.prefs.sendBigTextAsFile,
                 USER.id,
             )
-            APPWRITEUSERS.update_prefs(
-                user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
-                prefs=USER.prefs.dict(),
+        elif (
+            callback.actionType == CallbackQueryActionTypes.ACTION
+            and callback.actionObject == CallbackQueryActionsObjects.SENDSUBTITLES
+            and callback.actionValue == CallbackQueryActionsValues.TOGGLE
+            and not callback.actionValue == CallbackQueryActionsValues.NOTHING
+        ):
+            USER.prefs.sendSubtitles = bool(USER.prefs.sendSubtitles ^ True)
+            logging.debug(
+                "SendSubtitles changed to `%s` for user #%s",
+                USER.prefs.sendSubtitles,
+                USER.id,
             )
-            try:
-                callbackQuery.edit_message_text(
-                    text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
-                    reply_markup=Utils.generate_settings_keyboard(
-                        USER, callbackQuery.from_user.id
-                    ),
-                )
-            except MessageNotModified:
-                pass
-            return
+        APPWRITEUSERS.update_prefs(
+            user_id=f"tlgrm-vocalballsbot-{callbackQuery.from_user.id}",
+            prefs=USER.prefs.dict(),
+        )
+        try:
+            callbackQuery.edit_message_text(
+                text=f"<b>{LOCALE.get(USER.prefs.language, 'settings')}</b> <i>(ID: <code>{USER.id}</code>)</i>",
+                reply_markup=Utils.generate_settings_keyboard(
+                    USER, callbackQuery.from_user.id
+                ),
+            )
+        except MessageNotModified:
+            pass
         return
     except Exception as e:
         logging.error("Error while processing the whole callback: %s", e)

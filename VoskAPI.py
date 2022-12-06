@@ -42,7 +42,7 @@ class VoskAPI:
     def __get_vosk_server_eof_message() -> dict:
         return {"eof": 1}
 
-    def __get_language(self) -> AvailableLanguages:  # skipcq: PTC-W0038
+    def get_language(self) -> AvailableLanguages:  # skipcq: PTC-W0038
         return self.__LANGUAGE
 
     @staticmethod
@@ -152,7 +152,7 @@ class VoskAPI:
                 "Took %s seconds to process audio file with %d bytes sent each time for language `%s` and file `%s`",
                 time.time() - startTime,
                 bytesToReadEveryTime,
-                self.__get_language().value,
+                self.get_language().value,
                 audioFile.__str__(),
             )
             # logging.info("Using native audio file format")

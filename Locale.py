@@ -5,7 +5,9 @@ import json
 
 class SingleLocale(BaseModel):
     voiceMessageReceived: str
+    fileMessageReceived: str
     voiceMessageProcessing: str
+    fileMessageProcessing: str
     noWordsFound: str
     settings: str
     settingsLanguage: str
@@ -24,8 +26,12 @@ class SingleLocale(BaseModel):
     settingSendBigTextAsFile: str
     settingSendBigTextAsFileOn: str
     settingSendBigTextAsFileOff: str
+    settingSendSubtitles: str
+    settingSendSubtitlesOn: str
+    settingSendSubtitlesOff: str
     messageSentAsAFile: str
     errorWhileDownloading: str
+    fullMessageAfterProcessing: str
 
 
 class Locale:

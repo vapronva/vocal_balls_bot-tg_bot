@@ -1,6 +1,8 @@
 {
     "voiceMessageReceived": "Голосовое сообщение получено",
+    "fileMessageReceived": "Аудио-файл получен",
     "voiceMessageProcessing": "Голосовое сообщение обрабатывается",
+    "fileMessageProcessing": "Аудио-файл обрабатывается",
     "noWordsFound": "Не удалось распознать слова",
     "settings": "Настройки",
     "settingsLanguage": "Язык",
@@ -19,6 +21,10 @@
     "settingSendBigTextAsFile": "Отправлять большие тексты как файл",
     "settingSendBigTextAsFileOn": "Включено",
     "settingSendBigTextAsFileOff": "Выключено",
+    "settingSendSubtitles": "Отправлять VTT субтитры",
+    "settingSendSubtitlesOn": "Включено",
+    "settingSendSubtitlesOff": "Выключено",
     "messageSentAsAFile": "Распознанный текст был отправлен как файл",
-    "errorWhileDownloading": "Произошла ошибка при загрузке файла"
+    "errorWhileDownloading": "Произошла ошибка при загрузке файла",
+    "fullMessageAfterProcessing": "Полное сообщение будет отправлено после обработки"
 }
