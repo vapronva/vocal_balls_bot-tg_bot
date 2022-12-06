@@ -72,7 +72,7 @@ class VoskAPI:
         try:
             data = json.loads(response)
             if "result" in data:
-                confidence = sum([word["conf"] for word in data["result"]]) / len(
+                confidence = sum(word["conf"] for word in data["result"]) / len(
                     data["result"]
                 )
                 startTime = data["result"][0]["start"]

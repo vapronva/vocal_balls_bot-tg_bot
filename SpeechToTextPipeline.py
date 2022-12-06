@@ -13,6 +13,7 @@ import asyncio
 from utils import Utils
 import audioread
 from ReCasePuncAPI import RecasepuncAPI
+from models import SpeechRecognitionVoskPartialResult
 
 
 class MESSAGE_TYPES_FILTRED(Enum):
@@ -32,10 +33,19 @@ class STTPipeline:
         self.message = message
         self.user = user
         self.config = config
+        self.vosk = VoskAPI(
+            apiKey=self.config.get_vosk_api_key(),
+            language=self.initialLanguage,
+        )
+        self.outputFile = (
+            Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
+            if self.messageType == MESSAGE_TYPES_FILTRED.VOICE
+            else Path(
+                f"files_download/{uuid.uuid4().__str__().replace('-', '')[:16]}-{self.message.audio.file_name.replace(' ', '_').replace('/', '_').replace('-', '_')}"
+            )
+        )
+        self.results: list[SpeechRecognitionVoskPartialResult] = []
         self.__post_init__()
-
-    def get_user(self) -> UserModel:
-        return self.user
 
     def __post_init__(self) -> None:
         self.user.prefs.statistics.messagesReceived += 1
@@ -51,8 +61,10 @@ class STTPipeline:
             quote=True,
         )  # type: ignore
 
+    def get_user(self) -> UserModel:
+        return self.user
+
     def run(self) -> int:
-        self.__initialize()
         if self.__download_message() != 0:
             return 1
         self.__start_threads()
@@ -62,19 +74,6 @@ class STTPipeline:
         )
         self.__get_and_process_results(RCPAPI)
         return 0
-
-    def __initialize(self) -> None:
-        self.vosk = VoskAPI(
-            apiKey=self.config.get_vosk_api_key(),
-            language=self.initialLanguage,
-        )
-        self.outputFile = (
-            Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
-            if self.messageType == MESSAGE_TYPES_FILTRED.VOICE
-            else Path(
-                f"files_download/{uuid.uuid4().__str__().replace('-', '')[:16]}-{self.message.audio.file_name.replace(' ', '_').replace('/', '_').replace('-', '_')}"
-            )
-        )
 
     def __download_message(self) -> int:
         try:
