@@ -33,18 +33,6 @@ class STTPipeline:
         self.message = message
         self.user = user
         self.config = config
-        self.vosk = VoskAPI(
-            apiKey=self.config.get_vosk_api_key(),
-            language=self.initialLanguage,
-        )
-        self.outputFile = (
-            Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
-            if self.messageType == MESSAGE_TYPES_FILTRED.VOICE
-            else Path(
-                f"files_download/{uuid.uuid4().__str__().replace('-', '')[:16]}-{self.message.audio.file_name.replace(' ', '_').replace('/', '_').replace('-', '_')}"
-            )
-        )
-        self.results: list[SpeechRecognitionVoskPartialResult] = []
         self.__post_init__()
 
     def __post_init__(self) -> None:
@@ -60,6 +48,18 @@ class STTPipeline:
             f"__💬 {LOCALE.get(self.user.prefs.language, 'voiceMessageReceived') if self.messageType == MESSAGE_TYPES_FILTRED.VOICE else LOCALE.get(self.user.prefs.language, 'fileMessageReceived')}...__",
             quote=True,
         )  # type: ignore
+        self.vosk = VoskAPI(
+            apiKey=self.config.get_vosk_api_key(),
+            language=self.initialLanguage,
+        )
+        self.outputFile = (
+            Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
+            if self.messageType == MESSAGE_TYPES_FILTRED.VOICE
+            else Path(
+                f"files_download/{uuid.uuid4().__str__().replace('-', '')[:16]}-{self.message.audio.file_name.replace(' ', '_').replace('/', '_').replace('-', '_')}"
+            )
+        )
+        self.results: list[SpeechRecognitionVoskPartialResult] = []
 
     def get_user(self) -> UserModel:
         return self.user
