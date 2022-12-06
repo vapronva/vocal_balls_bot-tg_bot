@@ -1,8 +1,4 @@
 from config import Config, AvailableLanguages
-from VoskAPI import VoskAPI
-import threading
-import asyncio
-from pathlib import Path
 import logging
 from pyrogram import Client as BotClient  # type: ignore
 from pyrogram import filters as PyrogramFilters
@@ -17,13 +13,10 @@ from models import (
     CallbackQueryActionsObjects,
     CallbackQueryActionsValues,
 )
-import audioread
-import time
-import uuid
 import sys
 from utils import Utils
-from ReCasePuncAPI import RecasepuncAPI
 from Locale import LOCALE
+from SpeechToTextPipeline import STTPipeline, MESSAGE_TYPES_FILTRED
 
 
 logging.basicConfig(
@@ -38,10 +31,6 @@ bot = BotClient(
     api_hash=CONFIG.get_telegram_api_hash(),
     bot_token=CONFIG.get_telegram_bot_token(),
     workers=CONFIG.get_telegram_bot_workers(),
-)
-
-RCPAPI = RecasepuncAPI(
-    endpointBase=CONFIG.get_vprw_rcpapi_endpoint(), apiKey=CONFIG.get_vprw_rcpapi_key()
 )
 
 APPWRITECLIENT = AppWriteClient()
@@ -92,107 +81,24 @@ def on_stats_command(_, message) -> None:
 
 @bot.on_message(PyrogramFilters.voice & PyrogramFilters.private)
 def on_voice_message_private(_, message: PyrogramMessage) -> None:
-    logging.info("Message type: %s", type(message))
-    USER = get_user(message.from_user.id)
-    USER.prefs.statistics.messagesReceived += 1
-    APPWRITEUSERS.update_prefs(
-        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
-    )
-    initialLanguage: AvailableLanguages = USER.prefs.language
-    logging.info(
-        "Received voice message from user #%s for message ID #%s",
-        message.from_user.id,
-        message.id,
-    )
-    botRepliedMessage: PyrogramMessage = message.reply_text(
-        f"__💬 {LOCALE.get(USER.prefs.language, 'voiceMessageReceived')}...__",
-        quote=True,
-    )  # type: ignore
-    vosk = VoskAPI(
-        apiKey=CONFIG.get_vosk_api_key(),
-        language=initialLanguage,
-    )
-    outputFile = Path(f"files_download/{uuid.uuid4().__str__().replace('-', '')}.ogg")
-    try:
-        _ = message.download(file_name=outputFile.__str__())
-    except Exception as e:
-        logging.error(
-            "Error while downloading file for user #%s for message #%s: %s",
-            message.from_user.id,
-            message.id,
-            e,
-        )
-        _ = botRepliedMessage.edit_text(
-            f"__❌ {LOCALE.get(USER.prefs.language, 'errorWhileDownloading')}__\n\n```{e}```"
-        )
-        return
-    threadProcessor = threading.Thread(
-        target=asyncio.run,
-        args=(
-            vosk.process_audio_file(
-                audioFile=outputFile,
-                bytesToReadEveryTime=64000,
-            ),
-        ),
-    )
-    threadTelegramMessageEditor = threading.Thread(
-        target=Utils.update_stt_result_as_everything_comes_in,
-        args=(
-            botRepliedMessage,
-            vosk,
-            USER.prefs.howManyDigitsAfterDot,
-        ),
-    )
-    threadProcessor.start()
-    threadTelegramMessageEditor.start()
-    _ = botRepliedMessage.edit_text(
-        text=f"__🔁 {LOCALE.get(USER.prefs.language, 'voiceMessageProcessing')}...__"
-    )
-    threadProcessor.join()
-    threadTelegramMessageEditor.join()
-    results = vosk.get_results()
-    if results is None or len(results) == 0:
-        _ = botRepliedMessage.edit_text(
-            text=f"__⚠️ {LOCALE.get(USER.prefs.language, 'noWordsFound')}!__"
-        )
-        return
-    Utils.send_stt_result_with_respecting_max_message_length(
+    STTP = STTPipeline(
+        messageType=MESSAGE_TYPES_FILTRED.VOICE,
         message=message,
-        initialMessage=botRepliedMessage,
-        vosk=vosk,
-        user=USER,
-        rcpapi=RCPAPI if USER.prefs.recasepunc else None,
-        language=initialLanguage,
+        user=get_user(message.from_user.id),
+        config=CONFIG,
     )
-    startTimeAnalytics = time.time()
-    USER = get_user(message.from_user.id)
-    if USER.prefs.participateInStatistics:
-        USER.prefs.statistics.processedWithLanguage[initialLanguage.value] += 1
-        USER.prefs.statistics.messagesProcessed += 1
-        USER.prefs.statistics.charactersProcessed += sum(
-            len(resultResult.text) for resultResult in results
-        )
-        fileOggType = audioread.audio_open(outputFile.__str__())
-        USER.prefs.statistics.secondsOfAudioProcessed += (
-            int(fileOggType.duration) if fileOggType.duration else 0
-        )
     APPWRITEUSERS.update_prefs(
-        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", prefs=USER.prefs.dict()
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}",
+        prefs=STTP.get_user().prefs.dict(),
     )
-    USER.name = (
-        f"{message.from_user.first_name} {message.from_user.last_name} (@{message.from_user.username})"
-        if message.from_user.username is not None
-        else f"{message.from_user.first_name} {message.from_user.last_name} (null)"
+    STTP.run()
+    STTP.analytics(get_user(message.from_user.id))
+    APPWRITEUSERS.update_prefs(
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}",
+        prefs=STTP.get_user().prefs.dict(),
     )
     APPWRITEUSERS.update_name(
-        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=USER.name
-    )
-    outputFile.unlink()
-    logging.info(
-        "Processed voice message analytics and cleaned up for user #%s for message ID #%s in %s seconds",
-        message.from_user.id,
-        message.id,
-        time.time() - startTimeAnalytics,
+        user_id=f"tlgrm-vocalballsbot-{message.from_user.id}", name=STTP.get_user().name
     )
     return
 
